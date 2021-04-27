@@ -79,7 +79,7 @@ public class MimicDataArrayJob {
         mimicDataSmooth.print();
 
         // sink in kafka for visualization
-     //   mimicDataSmooth.addSink(MimicDataKafkaProducer);
+        mimicDataSmooth.addSink(MimicDataKafkaProducer);
 
 
         System.out.println("  Result saved in file: " + outCsvFile);
