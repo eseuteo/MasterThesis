@@ -64,12 +64,12 @@ public class MimicDataArrayJob {
                 .addSource(new MimicDirDataSourceFunction(mimicDirectory))
                 .assignTimestampsAndWatermarks(new UserDefinedFunctions.ExtractTimestampMimic());
 
-
         //mimicData.print();
 
         DataStream<MimicWaveData> mimicDataSmooth = mimicData.keyBy(MimicWaveData::getRecordId)
                 // mimic data is sampled every minute
                 // here we apply a moving average function to each of the vitals
+                //.window(SlidingEventTimeWindows.of(Time.seconds(orderMA), Time.seconds(slideMA)))
                 .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(slideMA)))
                 .trigger(CountTrigger.of(orderMA))
                 // Apply a moving average window to smooth the data

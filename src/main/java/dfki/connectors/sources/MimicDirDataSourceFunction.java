@@ -70,7 +70,8 @@ public class MimicDirDataSourceFunction implements SourceFunction<MimicWaveData>
                     String var2 = var1.replace("]'", "");
                     /////////-----var2 = var2.replace("2015","2018");
 
-                    long millisSinceEpoch = LocalDateTime.parse(var2, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/uuuu"))
+                    long millisSinceEpoch = LocalDateTime.parse(var2, DateTimeFormatter.ofPattern("HH:mm:ss " +
+                            "dd/MM/yyyy"))
                             .atZone(ZoneId.systemDefault())
                             .toInstant()
                             .toEpochMilli();

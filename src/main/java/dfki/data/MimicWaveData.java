@@ -128,9 +128,8 @@ public class MimicWaveData {
                this.getRecordId() + "," +
                this.getHR() + "," +        // val[1]
                this.getABPMean() + "," +   // val[2]
-               this.getPAPMean() + "," +
-               this.getCVP() + "," +
-               this.getPulse() + "," +
+               this.getABPSys() + "," +
+               this.getABPDias() + "," +
                this.getResp() + "," +
                this.getSpO2() + "," +
                this.getNBPMean() + "," +

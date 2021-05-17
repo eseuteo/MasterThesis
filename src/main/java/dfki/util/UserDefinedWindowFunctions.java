@@ -122,5 +122,77 @@ public class UserDefinedWindowFunctions {
         }
     }
 
+    public static class InlierFilterFunction extends ProcessWindowFunction<MimicWaveData, MimicWaveData, String,
+            TimeWindow> {
+        @Override
+        public void process(String key, Context context, Iterable<MimicWaveData> iterable, Collector<MimicWaveData> collector) throws Exception {
 
+            double winsum[] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+            int count = 0;
+
+
+            for (MimicWaveData in: iterable) {
+                //System.out.println("  WIN: " + in.toString());
+                winsum[0] = winsum[0] + in.getHR();
+                winsum[1] = winsum[1] + in.getABPSys();
+                winsum[2] = winsum[2] + in.getABPDias();
+                winsum[3] = winsum[3] + in.getABPMean();
+                winsum[4] = winsum[4] + in.getPAPSys();
+                winsum[5] = winsum[5] + in.getPAPDias();
+                winsum[6] = winsum[6] + in.getPAPMean();
+                winsum[7] = winsum[7] + in.getCVP();
+                winsum[8] = winsum[8] + in.getPulse();
+                winsum[9] = winsum[9] + in.getResp();
+                winsum[10] = winsum[10] + in.getSpO2();
+                winsum[11] = winsum[11] + in.getNBPSys();
+                winsum[12] = winsum[12] + in.getNBPDias();
+                winsum[13] = winsum[13] + in.getNBPMean();
+                count++;
+            }
+
+            String winKey = iterable.iterator().next().getKey();
+            String winrecordId = iterable.iterator().next().getRecordId();
+            winsum[0] = winsum[0]/(1.0 * count);
+            winsum[1] = winsum[1]/(1.0 * count);
+            winsum[2] = winsum[2]/(1.0 * count);
+            winsum[3] = winsum[3]/(1.0 * count);
+            winsum[4] = winsum[4]/(1.0 * count);
+            winsum[5] = winsum[5]/(1.0 * count);
+            winsum[6] = winsum[6]/(1.0 * count);
+            winsum[7] = winsum[7]/(1.0 * count);
+            winsum[8] = winsum[8]/(1.0 * count);
+            winsum[9] = winsum[9]/(1.0 * count);
+            winsum[10] = winsum[10]/(1.0 * count);
+            winsum[11] = winsum[11]/(1.0 * count);
+            winsum[12] = winsum[12]/(1.0 * count);
+            winsum[13] = winsum[13]/(1.0 * count);
+
+            MimicWaveData event = new MimicWaveData(winKey, winrecordId,
+                    winsum[0],
+                    winsum[1],
+                    winsum[2],
+                    winsum[3],
+                    winsum[4],
+                    winsum[5],
+                    winsum[6],
+                    winsum[7],
+                    winsum[8],
+                    winsum[9],
+                    winsum[10],
+                    winsum[11],
+                    winsum[12],
+                    winsum[13],
+                    context.window().getEnd());
+
+            // introduce a delay to make easier the visualization
+            try {
+                sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            collector.collect(event);
+
+        }
+    }
 }
