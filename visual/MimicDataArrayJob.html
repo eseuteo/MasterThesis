@@ -46,6 +46,8 @@ svg {
 
 <body>
 <script src='https://d3js.org/d3.v4.min.js'></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<svg id="legend" height=300 width=450></svg>
 <script>
 
 var myBrush;
@@ -126,6 +128,29 @@ function initialization(data) {
       };
     });
 
+   var legend = d3.select("#legend")
+   var keys = ["HR","ABPMean","ABPSys","ABPDias","Resp","SpO2","NBPMean", "ResultCEP"]
+
+   legend.selectAll("mydots")
+        .data(keys)
+        .enter()
+        .append("circle")
+            .attr("cx", 100)
+            .attr("cy", function(d,i){ return 100 + i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+            .attr("r", 7)
+            .style("fill", function(d){ return color(d)})
+
+   legend.selectAll("mylabels")
+       .data(keys)
+       .enter()
+       .append("text")
+       .attr("x", 120)
+       .attr("y", function(d,i){ return 100 + i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+       .style("fill", function(d){ return color(d)})
+       .text(function(d){ return d})
+       .attr("text-anchor", "left")
+       .style("alignment-baseline", "middle")
+
    x.domain(d3.extent(data, function(d) { return d.date; }) );
    y.domain([
       d3.min(sources, function(c) { return d3.min(c.values, function(v) { return v.signal; }); }),
@@ -157,6 +182,8 @@ function initialization(data) {
     var end = x2.range()[1];
     context.append("g").attr("class", "x brush").call(myBrush).call(myBrush.move, [begin, end]);
 
+
+
 }
 
 function webSocketInvoke() {
@@ -181,10 +208,10 @@ function webSocketInvoke() {
       console.log(received_msg);
      // selecting the data of one patient
      //if(val[1].localeCompare("2014_a40551n") == 0) {
-     if(val[1].localeCompare("2009_a40802n") == 0) {
+     //if(val[1].localeCompare("2009_a40802n") == 0) {
      //if(val[1].localeCompare("2010_a40473n") == 0) {
      //if(val[1].localeCompare("2010_a41466n") == 0) {
-
+       if(val[1].localeCompare("signals_69435") == 0) {
        var d = new Date(val[0]);
        var val1 = val[2];  // HR
        var val2 = val[3];  // ABPMean

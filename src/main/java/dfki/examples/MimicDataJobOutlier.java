@@ -1,11 +1,10 @@
 package dfki.examples;
 
+import dfki.connectors.sinks.SerializationFunctions.KeyedDataPointDataSerialization;
 import dfki.connectors.sources.MimicDataSourceFunction;
 import dfki.data.KeyedDataPoint;
-import dfki.data.MimicWaveData;
-import dfki.util.UserDefinedWindowFunctions;
 import dfki.util.UserDefinedFunctions;
-
+import dfki.util.UserDefinedWindowFunctions;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -14,7 +13,6 @@ import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindow
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
-import dfki.connectors.sinks.SerializationFunctions.KeyedDataPointDataSerialization;
 
 import java.util.Properties;
 
@@ -36,11 +34,11 @@ import java.util.Properties;
  * start from visual:
  * firefox MimicDataJob.html
  */
-public class MimicDataJob {
+public class MimicDataJobOutlier {
     public static void main(String[] args) throws Exception {
-
+        // Input parameters parsing
         final ParameterTool parameters = ParameterTool.fromArgs(args);
-        // Checking input parameters
+
         if (!parameters.has("input")) {
             throw new Exception("Input Data is not specified");
         }
@@ -65,7 +63,7 @@ public class MimicDataJob {
                 properties,                                  // producer config
                 FlinkKafkaProducer.Semantic.EXACTLY_ONCE);   // fault-tolerance
 
-
+        // Flink process start
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
         @SuppressWarnings({"rawtypes", "serial"})
@@ -82,7 +80,6 @@ public class MimicDataJob {
                 // mimic data is sampled every minute
                 // smooth by orderMA windows that slide every slideMA
                 .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(slideMA))).trigger(CountTrigger.of(orderMA))
-                //
                 .process(new UserDefinedWindowFunctions.MovingAverageFunction());
 
         //mimicDataSmooth.print();
