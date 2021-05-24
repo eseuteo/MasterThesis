@@ -11,6 +11,7 @@ import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironm
 import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindows, TumblingEventTimeWindows}
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
+import util.aggregation.Stdev
 import util.interpolation.{CustomInterpolation, Interpolation}
 import util.{MovingAverageFunction, OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
 
@@ -95,7 +96,14 @@ object MimicDataJob {
     val mimicDataInterpolated = mimicDataWithoutOutliers
       .keyBy(t => t.label)
       .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
-      .process(new Interpolation(mode="spline"))
+      .process(new Interpolation(mode="linear"))
+
+//    val stdev = mimicDataWithoutOutliers
+//      .keyBy(t => t.label)
+//      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
+//      .aggregate(new Stdev())
+
+//    stdev.print()
 
     mimicDataInterpolated.print()
 
