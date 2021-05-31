@@ -12,6 +12,7 @@ import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindo
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.aggregation.Stdev
+import util.featureextraction.Correlation
 import util.interpolation.{CustomInterpolation, Interpolation}
 import util.{MovingAverageFunction, OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
 
@@ -24,7 +25,7 @@ object MimicDataJob {
   def main(args: Array[String]): Unit = {
     val parameters: ParameterTool = ParameterTool.fromArgs(args)
     val signals = Array(
-      "Time and date",
+//      "Time and date",
       "HR",
       "ABPSys",
       "ABPDias",
@@ -98,6 +99,30 @@ object MimicDataJob {
       .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
       .process(new Interpolation(mode="linear"))
 
+    val abp = mimicDataWithTimestamps.filter(t => t.label == "ABPMean")
+    val hr = mimicDataWithTimestamps.filter(t => t.label == "HR")
+
+    val abpWithKey: DataStream[DataPoint[Double]] = abp.map(t => {
+      var datapoint = new DataPoint[Double](t.t, t.label, t.value)
+      datapoint.key = "1"
+      datapoint
+    })
+    val hrWithKey: DataStream[DataPoint[Double]] = hr.map(t => {
+      var datapoint = new DataPoint[Double](t.t, t.label, t.value)
+      datapoint.key = "1"
+      datapoint
+    })
+
+    val correlation = mimicDataWithTimestamps.map(t => {
+      var dataPoint = new DataPoint[Double](t.t, t.label, t.value)
+      dataPoint.key = "1"
+      dataPoint
+    }).keyBy(t => t.key)
+      .window(SlidingEventTimeWindows.of(Time.minutes(1000), Time.minutes(1)))
+      .process(new Correlation("HR", "HR"))
+
+    correlation.print()
+
 //    val stdev = mimicDataWithoutOutliers
 //      .keyBy(t => t.label)
 //      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
@@ -105,9 +130,9 @@ object MimicDataJob {
 
 //    stdev.print()
 
-    mimicDataInterpolated.print()
+//    mimicDataInterpolated.print()
 
-    mimicDataInterpolated.map(_.toString).addSink(kafkaProducer)
+//    mimicDataInterpolated.map(_.toString).addSink(kafkaProducer)
 
     env.execute("MimicDataJob")
 

@@ -7,7 +7,7 @@ class KeyedDataPoint[T](
     timestampMs: Long = 0,
     label: String = null,
     value: T = null,
-    var key: String = null,
+    var key1: String = null,
     var isInlier: Boolean = false
 ) extends DataPoint[T](timestampMs, label: String, value) {
 
