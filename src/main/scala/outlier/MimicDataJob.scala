@@ -12,7 +12,7 @@ import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindo
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.aggregation.Stdev
-import util.featureextraction.Correlation
+import util.featureextraction.{Correlation, MultiScaleEntropy}
 import util.interpolation.{CustomInterpolation, Interpolation}
 import util.{MovingAverageFunction, OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
 
@@ -121,7 +121,14 @@ object MimicDataJob {
       .window(SlidingEventTimeWindows.of(Time.minutes(1000), Time.minutes(1)))
       .process(new Correlation("HR", "HR"))
 
-    correlation.print()
+//    correlation.print()
+
+    val mse = mimicDataWithTimestamps
+      .keyBy(t => t.label)
+      .window(TumblingEventTimeWindows.of(Time.minutes(100)))
+      .process(new MultiScaleEntropy(0.1, 5, 5))
+
+//    mse.print()
 
 //    val stdev = mimicDataWithoutOutliers
 //      .keyBy(t => t.label)
