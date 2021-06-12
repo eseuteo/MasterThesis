@@ -30,8 +30,43 @@ class Correlation(signalA: String, signalB: String) extends ProcessWindowFunctio
     val t1 = Math.abs(x1 - y1)
     val t2 = Math.abs(x2 - y2)
 
+    val h1 = x1
+    val l1 = y1
+    val h2 = x2
+    val l2 = y2
+    val s = diff_1
+    val d = oth_1
+
+    val w = getWValue(h1, l1, h2, l2, s, d)
+
     val correlation: Double = (Math.max(diff_1, oth_1) - Math.abs(t1 - t2)) * 1.0 / totalSize
     out.collect(correlation)
+  }
+
+  def getWValue(h1: Int, l1: Int, h2: Int, l2: Int, s: Int, d: Int): Int = {
+    val a = math.abs(h1 - l1)
+    val b = math.abs(h2 - l2)
+    val c = math.abs(s - d)
+    if (a == b == c) {
+      if ((a + b) / 2 > (s - d)) {
+        -1
+      } else {
+        1
+      }
+    } else if (a == b) {
+      if ((a + b) / 2 > c) {
+        -1
+      } else {
+        1
+      }
+    } else {
+      val aux = math.abs(math.max((h1 - l1), (h2 - l2))) + math.min((h1 - l1), (h2 - l2))
+      if (aux > c) {
+        -1
+      } else {
+        1
+      }
+    }
   }
 
   def generateParameters(listValues : Iterable[DataPoint[Double]]): (Int, Int) = {
