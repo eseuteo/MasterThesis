@@ -12,7 +12,7 @@ import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindo
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.aggregation.Stdev
-import util.featureextraction.{Correlation, MultiScaleEntropy}
+import util.featureextraction.{Correlation, Delta, MultiScaleEntropy}
 import util.interpolation.{CustomInterpolation, Interpolation}
 import util.{MovingAverageFunction, OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
 
@@ -67,6 +67,12 @@ object MultiScaleEntropyMain {
       .process(new MultiScaleEntropy(0.001, 5, 5))
 
     mse.print()
+
+    val delta = mimicDataWithTimestamps.keyBy(t => t.label).window(SlidingEventTimeWindows.of(Time.minutes(2), Time.minutes(1))).process(new Delta())
+    val deltaDelta = delta.keyBy(t => t.label).window(SlidingEventTimeWindows.of(Time.minutes(2), Time.minutes(1))).process(new Delta("deltadelta"))
+
+    delta.print()
+    deltaDelta.print()
 
     env.execute("MimicDataJob")
 
