@@ -27,7 +27,7 @@ class Interpolation(timeMeasure: String = "minutes", slideSizeInMinutes: Int = 1
       mode match {
         case "linear" => out.collect(new DataPoint[Double](expectedTimestamp, key,
           getLinearInterpolation(previousDataPoint, nextDataPoint, expectedTimestamp)))
-        case "locb" => {
+        case "locf" => {
           val dataPointValue: Double = if (previousDataPoint.isEmpty) {
             0.0
           } else {
