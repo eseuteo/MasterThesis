@@ -93,7 +93,7 @@ public class MimicDataJob {
                 .keyBy("key").map(new UserDefinedFunctions.ZscoreNormalization());
 
         mimicDataSmoothNormalized.print();
-        mimicDataSmoothNormalized.addSink(MimicDataKafkaProducer);
+        //mimicDataSmoothNormalized.addSink(MimicDataKafkaProducer);
 
         System.out.println("  Result saved in file: " + outCsvFile);
         env.execute("MimicDataJob");

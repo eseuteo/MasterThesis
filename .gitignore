@@ -5,4 +5,5 @@ target
 .idea/*
 *.iml
 *.log
+target/*
 visual/node_modules/

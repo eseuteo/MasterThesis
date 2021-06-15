@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import sys
 import tensorflow as tf
+import os
 
 # Setting seed for reproducibility
 np.random.seed(1234)
@@ -69,7 +70,10 @@ if __name__ == '__main__':
     train_df['mylabel'] = np.where(train_df.sofa_Score > sofa_threshold, 'shock','Nonshock')
     train_df = train_df.loc[:,sequence_cols_all]
     label_encoding = pd.get_dummies(train_df.mylabel)
-    train_df = pd.concat([train_df, label_encoding], axis=1)    
+    train_df = pd.concat([train_df, label_encoding], axis=1)
+
+    # save train data to test with the Java LSTMTest
+    train_df.to_csv("train_seq_data.csv")
 
     # generate the sequences, of size sequence_length
     seq_gen = list(gen_sequence(train_df, sequence_length, sequence_cols))
@@ -100,7 +104,7 @@ if __name__ == '__main__':
     model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
 
     # fit the network
-    history = model.fit(seq_array, label_array, epochs=50, batch_size=16, verbose=1, shuffle=False
+    history = model.fit(seq_array, label_array, epochs=5, batch_size=16, verbose=1, shuffle=False
                         # ,validation_split=0.05,
                         # callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=0, mode='min')]
                         # ,tf.keras.callbacks.ModelCheckpoint(model_path,monitor='val_loss', save_best_only=True, mode='min', verbose=0)]
@@ -138,3 +142,17 @@ if __name__ == '__main__':
     recall = recall_score(y_true, y_pred)
     print(' accuracy = ', accuracy, '\n balanced_accuracy = ', balanced_accuracy, '\n precision = ', precision, '\n', 'recall = ', recall)
 
+    export_dir = '/projects/students/Master/MedicalSequences/FlinkSequences/seq_classification/python/tmp'
+    
+    
+    #with tf.keras.backend.get_session() as sess:
+    #with tf.compat.v1.keras.backend.get_session() as sess:
+    #    tf.saved_model.simple_save(sess, export_dir, \
+    #                   inputs= {"keys":model.input}, \
+    #                    outputs= {t.name: t for t in model.outputs})
+
+
+    # save the model
+    model_name = "lstm_model_vitals"
+    model_path = os.path.join(model_name)
+    tf.saved_model.save(model,model_path)
