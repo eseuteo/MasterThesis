@@ -6,3 +6,4 @@ target
 *.iml
 *.log
 visual/node_modules/
+.scalafmt.conf
