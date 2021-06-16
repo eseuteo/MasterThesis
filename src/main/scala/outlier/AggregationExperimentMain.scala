@@ -92,16 +92,16 @@ object AggregationExperimentMain {
     val mimicDataAvgStdMin = mimicDataAvgStd
       .join(mimicDataMin)
       .where(t => t._1)
-      .equalTo(t => t.t)
+      .equalTo(t => t._1)
       .window(TumblingEventTimeWindows.of(Time.minutes(1)))
-      .apply((t1, t2) => (t1._1, t1._2, t1._3, t2.value))
+      .apply((t1, t2) => (t1._1, t1._2, t1._3, t2._3))
 
     val mimicDataAllAggregates = mimicDataAvgStdMin
       .join(mimicDataMax)
       .where(t => t._1)
-      .equalTo(t => t.t)
+      .equalTo(t => t._1)
       .window(TumblingEventTimeWindows.of(Time.minutes(1)))
-      .apply((t1, t2) => (t1._1, t1._2, t1._3, t1._4, t2.value))
+      .apply((t1, t2) => (t1._1, t1._2, t1._3, t1._4, t2._3))
 
     mimicDataAllAggregates.print()
 

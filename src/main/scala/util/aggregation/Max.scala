@@ -3,26 +3,26 @@ package util.aggregation
 import data.DataPoint
 import org.apache.flink.api.common.functions.AggregateFunction
 
-class Max extends AggregateFunction[DataPoint[Double], DataPoint[Double], DataPoint[Double]]{
-  override def createAccumulator(): DataPoint[Double] = new DataPoint[Double](0L, "", Double.MinValue)
+class Max extends AggregateFunction[DataPoint[Double], (Long, String, Double), (Long, String, Double)]{
+  override def createAccumulator(): (Long, String, Double) = (0L, "", Double.MinValue)
 
   override def add(in: DataPoint[Double],
-                   acc: DataPoint[Double]): DataPoint[Double] = {
-    if (in.value > acc.value) {
-      new DataPoint[Double](math.max(acc.t, in.t), acc.label, in.value)
+                   acc: (Long, String, Double)): (Long, String, Double) = {
+    if (in.value > acc._3) {
+      (math.max(acc._1, in.t), in.label, in.value)
     } else {
-      new DataPoint[Double](math.max(acc.t, in.t), acc.label, acc.value)
+      (math.max(acc._1, in.t), in.label, acc._3)
     }
   }
 
-  override def getResult(acc: DataPoint[Double]): DataPoint[Double] = acc
+  override def getResult(acc: (Long, String, Double)): (Long, String, Double) = acc
 
-  override def merge(acc: DataPoint[Double],
-                     acc1: DataPoint[Double]): DataPoint[Double] = {
-    if (acc.value > acc1.value) {
-      new DataPoint[Double](math.max(acc.t, acc1.t), acc.label, acc.value)
+  override def merge(acc: (Long, String, Double),
+                     acc1: (Long, String, Double)): (Long, String, Double) = {
+    if (acc._3 > acc1._3) {
+      (math.max(acc._1, acc1._1), acc._2, acc._3)
     } else {
-      new DataPoint[Double](math.max(acc.t, acc1.t), acc.label, acc1.value)
+      (math.max(acc._1, acc1._1), acc._2, acc1._3)
     }
   }
 }
