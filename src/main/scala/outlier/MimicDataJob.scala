@@ -14,7 +14,7 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.aggregation.Stdev
 import util.featureextraction.{Correlation, MultiScaleEntropy}
 import util.interpolation.{CustomInterpolation, Interpolation}
-import util.{MovingAverageFunction, OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
+import util.{OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
 
 import java.time.{LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter

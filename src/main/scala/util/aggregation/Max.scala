@@ -4,14 +4,14 @@ import data.DataPoint
 import org.apache.flink.api.common.functions.AggregateFunction
 
 class Max extends AggregateFunction[DataPoint[Double], DataPoint[Double], DataPoint[Double]]{
-  override def createAccumulator(): DataPoint[Double] = new DataPoint[Double](0L, "", 0.0)
+  override def createAccumulator(): DataPoint[Double] = new DataPoint[Double](0L, "", Double.MinValue)
 
   override def add(in: DataPoint[Double],
                    acc: DataPoint[Double]): DataPoint[Double] = {
     if (in.value > acc.value) {
-      in
+      new DataPoint[Double](math.max(acc.t, in.t), acc.label, in.value)
     } else {
-      acc
+      new DataPoint[Double](math.max(acc.t, in.t), acc.label, acc.value)
     }
   }
 
@@ -20,9 +20,9 @@ class Max extends AggregateFunction[DataPoint[Double], DataPoint[Double], DataPo
   override def merge(acc: DataPoint[Double],
                      acc1: DataPoint[Double]): DataPoint[Double] = {
     if (acc.value > acc1.value) {
-      acc
+      new DataPoint[Double](math.max(acc.t, acc1.t), acc.label, acc.value)
     } else {
-      acc1
+      new DataPoint[Double](math.max(acc.t, acc1.t), acc.label, acc1.value)
     }
   }
 }

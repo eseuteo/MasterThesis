@@ -1,27 +1,25 @@
 package outlier
-
-import data.{DataPoint, KeyedDataPoint}
-import dfki.util.UserDefinedFunctions.ZscoreNormalization
+import data.DataPoint
 import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
-import org.apache.flink.api.common.serialization.SimpleStringSchema
-import org.apache.flink.streaming.api.windowing.time._
+import org.apache.flink.api.common.serialization.{SimpleStringEncoder, SimpleStringSchema}
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.scala.createTypeInformation
+import org.apache.flink.core.fs.Path
+import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindows, TumblingEventTimeWindows}
-import org.apache.flink.streaming.api.windowing.triggers.CountTrigger
+import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
-import util.aggregation.Stdev
-import util.featureextraction.{Correlation, Delta, MultiScaleEntropy}
-import util.interpolation.{CustomInterpolation, Interpolation}
-import util.{OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
+import org.joda.time.DateTime
+import util.aggregation.{Average, Max, Min, Stdev}
+import util.interpolation.Interpolation
 
 import java.time.{LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
 
-object MultiScaleEntropyMain {
+object AggregationExperimentMain {
   def main(args: Array[String]): Unit = {
     val parameters: ParameterTool = ParameterTool.fromArgs(args)
     val signals = Array("HR", "ABPSys", "ABPDias", "ABPMean", "RESP", "SpO2")
@@ -57,25 +55,66 @@ object MultiScaleEntropyMain {
       val timestamp = LocalDateTime.parse(data(0), DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/uuuu")).atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
       var list: ListBuffer[DataPoint[Double]] = new ListBuffer[DataPoint[Double]]
       (data.slice(1, data.length), signals).zipped
-        .foreach((item, signal) => list += new DataPoint[Double](timestamp, signal, item.toDouble))
+        .foreach((item, signal) => {
+          if (signal.equals("RESP")) {
+            list += new DataPoint[Double](timestamp, signal, item.toDouble)}
+        })
       list
     }).assignTimestampsAndWatermarks(watermarkStrategy)
 
-    val mse = mimicDataWithTimestamps
+    val mimicDataAvg = mimicDataWithTimestamps
       .keyBy(t => t.label)
-      .window(TumblingEventTimeWindows.of(Time.minutes(1000)))
-      .process(new MultiScaleEntropy(0.001, 5, 5))
+      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
+      .aggregate(new Average())
 
-    mse.print()
+    val mimicDataStd = mimicDataWithTimestamps
+      .keyBy(t => t.label)
+      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
+      .aggregate(new Stdev())
 
-    val delta = mimicDataWithTimestamps.keyBy(t => t.label).window(SlidingEventTimeWindows.of(Time.minutes(2), Time.minutes(1))).process(new Delta())
-    val deltaDelta = delta.keyBy(t => t.label).window(SlidingEventTimeWindows.of(Time.minutes(2), Time.minutes(1))).process(new Delta("deltadelta"))
+    val mimicDataMin = mimicDataWithTimestamps
+      .keyBy(t => t.label)
+      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
+      .aggregate(new Min())
 
-    delta.print()
-    deltaDelta.print()
+    val mimicDataMax = mimicDataWithTimestamps
+      .keyBy(t => t.label)
+      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
+      .aggregate(new Max())
 
-    env.execute("MimicDataJob")
+    val mimicDataAvgStd = mimicDataAvg
+      .join(mimicDataStd)
+      .where(t => t._1)
+      .equalTo(t => t._1)
+      .window(TumblingEventTimeWindows.of(Time.minutes(1)))
+      .apply((t1, t2) => (t1._1, t1._3, t2._3))
+
+    val mimicDataAvgStdMin = mimicDataAvgStd
+      .join(mimicDataMin)
+      .where(t => t._1)
+      .equalTo(t => t.t)
+      .window(TumblingEventTimeWindows.of(Time.minutes(1)))
+      .apply((t1, t2) => (t1._1, t1._2, t1._3, t2.value))
+
+    val mimicDataAllAggregates = mimicDataAvgStdMin
+      .join(mimicDataMax)
+      .where(t => t._1)
+      .equalTo(t => t.t)
+      .window(TumblingEventTimeWindows.of(Time.minutes(1)))
+      .apply((t1, t2) => (t1._1, t1._2, t1._3, t1._4, t2.value))
+
+    mimicDataAllAggregates.print()
+
+
+
+    // mimicDataInterpolated.map(_.toString).addSink(kafkaProducer)
+
+//    val sink: StreamingFileSink[String] = StreamingFileSink
+//      .forRowFormat(new Path(outCsvFile), new SimpleStringEncoder[String]("UTF-8"))
+//      .build()
+//
+//    mimicDataAllAggregates.map(_.toString).addSink(sink)
+    env.execute("InterpolationMain")
 
   }
-
 }
