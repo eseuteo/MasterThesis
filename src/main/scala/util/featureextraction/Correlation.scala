@@ -1,7 +1,6 @@
 package util.featureextraction
 
 import data.DataPoint
-import org.apache.flink.api.common.functions.JoinFunction
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
