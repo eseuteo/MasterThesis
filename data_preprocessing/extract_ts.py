@@ -21,21 +21,11 @@ REQUIRED_SIGNALS = ["HR", "ABPSYS", "ABPDIAS", "ABPMEAN", "RESP", "SPO2"]
 def get_empty_signals_dict(length, signals_list, time_range_icustay, magnitude):
     signals_dict = dict()
     basetime = time_range_icustay[0]
-    ###
-    print(basetime)
-    print(length)
-    ###
     if magnitude == "seconds":
-        ###
-        print("seconds")
-        ###
         time_column = np.array(
             [basetime + datetime.timedelta(seconds=i + 1) for i in range(length)]
         )
     else:
-        ###
-        print("minutes")
-        ###
         time_column = np.array(
             [basetime + datetime.timedelta(minutes=i + 1) for i in range(length)]
         )
@@ -81,30 +71,37 @@ def get_overlapped_range(range_icustay, range_record):
 
 
 def extract_ts_from_subject(subject_row):
-    # ###
-    # print(f"Row: {subject_row}")
-    # ###
+    # get subject id
     subject_id = subject_row["subject_id"]
     print(subject_id)
+    # create signals dict as None
     signals_dict = None
 
+    # get url for retrieving signals
     current_user_id = str(subject_id).zfill(6)
     wdb_base_path = "https://physionet.org/files/"
     wdb_dir_path = f"mimic3wdb-matched/1.0/p{current_user_id[:2]}/p{current_user_id}/"
 
+    # get length (in seconds) of icustay
     time_range_icustay = get_time_range_icustay(subject_row)
     icustay_length_in_seconds = int(
         (time_range_icustay[1] - time_range_icustay[0]).total_seconds()
     )
 
+    # get list of files
     wdb_records = urllib.request.urlopen(wdb_base_path + wdb_dir_path + "RECORDS")
 
+    # filter numeric files
     numerics_files_list = [
         get_record_from_line(line)
         for line in wdb_records.readlines()
         if get_record_from_line(line)[-1] == "n"
     ]
 
+    sampling_frequency_magnitude = None
+    prev_sampling_frequency_magnitude = None
+
+    # iterate over numeric files
     for record in numerics_files_list:
         try:
             signals, fields = wfdb.rdsamp(record, pn_dir=wdb_dir_path)
@@ -112,26 +109,33 @@ def extract_ts_from_subject(subject_row):
             print(f"Error occurred while reading waveform: {record}")
             continue
 
+        # we already have the icu time range, now get the record time range
         time_range_record = get_time_range_record(fields)
-        # ###
-        # print(fields)
-        # print(time_range_record)
-        # print(time_range_icustay)
-        # ###
+
+        # get the overlapped portion between icustay and record
         time_range_overlapped = get_overlapped_range(
             time_range_icustay, time_range_record
         )
 
+        # skip iteration if not overlapped
         if time_range_overlapped is None:
-            # ###
-            # print("continue")
-            # ###
             continue
 
+        if sampling_frequency_magnitude is not None:
+            prev_sampling_frequency_magnitude = sampling_frequency_magnitude
         sampling_frequency_magnitude = (
             "seconds" if "%.3f" % (fields["fs"]) == "1.000" else "minutes"
         )
 
+        if (
+            prev_sampling_frequency_magnitude is not None
+            and prev_sampling_frequency_magnitude != sampling_frequency_magnitude
+        ):
+            sampling_frequency_magnitude = prev_sampling_frequency_magnitude
+            prev_sampling_frequency_magnitude = None
+            continue
+
+        # if signals dict has not been initialized
         if signals_dict is None:
             signal_length = icustay_length_in_seconds
             if sampling_frequency_magnitude == "minutes":
@@ -148,8 +152,6 @@ def extract_ts_from_subject(subject_row):
         ]
 
         signals_exist = all(x in signals_names_list for x in REQUIRED_SIGNALS)
-        print(signals_names_list)
-        print(signals_exist)
 
         index_start_signal = get_index_difference(
             time_range_icustay[0],
@@ -164,7 +166,6 @@ def extract_ts_from_subject(subject_row):
                 signals_names_list,
                 index_start_signal,
             )
-        print(signals_dict)
 
     df = pd.DataFrame(signals_dict)
     path = "/home/ricardohb/Documents/generated_files/ts/"
