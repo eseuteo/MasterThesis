@@ -13,23 +13,31 @@ from utils import (
     get_time_range_icustay,
     get_time_range_record,
     get_signal_index,
-    ranges_overlap,
-    get_delta_earliest_end_latest_start,
 )
 
 REQUIRED_SIGNALS = ["HR", "ABPSYS", "ABPDIAS", "ABPMEAN", "RESP", "SPO2"]
 
 
-def get_empty_signals_dict(length, signals_list, time_range_icustay):
+def get_empty_signals_dict(length, signals_list, time_range_icustay, magnitude):
     signals_dict = dict()
     basetime = time_range_icustay[0]
-    if sampling_frequency_magnitude == "seconds":
+    ###
+    print(basetime)
+    print(length)
+    ###
+    if magnitude == "seconds":
+        ###
+        print("seconds")
+        ###
         time_column = np.array(
-            [basetime + datetime.timedelta(seconds=i + 1) for i in range(signal_length)]
+            [basetime + datetime.timedelta(seconds=i + 1) for i in range(length)]
         )
     else:
+        ###
+        print("minutes")
+        ###
         time_column = np.array(
-            [basetime + datetime.timedelta(minutes=i + 1) for i in range(signal_length)]
+            [basetime + datetime.timedelta(minutes=i + 1) for i in range(length)]
         )
     signals_dict["TIME"] = time_column
     for item in signals_list:
@@ -72,27 +80,24 @@ def get_overlapped_range(range_icustay, range_record):
     return range_output
 
 
-def extract_ts_from_subject(subject_id: int):
+def extract_ts_from_subject(subject_row):
+    # ###
+    # print(f"Row: {subject_row}")
+    # ###
+    subject_id = subject_row["subject_id"]
+    print(subject_id)
     signals_dict = None
 
     current_user_id = str(subject_id).zfill(6)
-    wdb_path = f"https://physionet.org/files/mimic3wdb-matched/1.0/p{current_user_id[:2]}/p{current_user_id}/"
+    wdb_base_path = "https://physionet.org/files/"
+    wdb_dir_path = f"mimic3wdb-matched/1.0/p{current_user_id[:2]}/p{current_user_id}/"
 
-    connection = psycopg2.connect(database="mimic", user=os.environ["USERNAME"])
-    cursor = connection.cursor()
-    cursor.execute("set search_path to mimiciii")
-
-    query_subject_id = (
-        f"SELECT  * FROM sepsis3_cohort coh WHERE coh.subject_id = {subject_id}"
+    time_range_icustay = get_time_range_icustay(subject_row)
+    icustay_length_in_seconds = int(
+        (time_range_icustay[1] - time_range_icustay[0]).total_seconds()
     )
-    df_subject_id = pd.read_sql(query_subject_id, connection)
 
-    time_range_icustay = get_time_range_icustay(df_subject_id.iloc[0])
-    icustay_length_in_seconds = (
-        time_range_icustay[1] - time_range_icustay[0]
-    ).total_seconds()
-
-    wdb_records = urllib.request.urlopen(wdb_path + "RECORDS")
+    wdb_records = urllib.request.urlopen(wdb_base_path + wdb_dir_path + "RECORDS")
 
     numerics_files_list = [
         get_record_from_line(line)
@@ -108,11 +113,19 @@ def extract_ts_from_subject(subject_id: int):
             continue
 
         time_range_record = get_time_range_record(fields)
+        # ###
+        # print(fields)
+        # print(time_range_record)
+        # print(time_range_icustay)
+        # ###
         time_range_overlapped = get_overlapped_range(
             time_range_icustay, time_range_record
         )
 
         if time_range_overlapped is None:
+            # ###
+            # print("continue")
+            # ###
             continue
 
         sampling_frequency_magnitude = (
@@ -123,13 +136,20 @@ def extract_ts_from_subject(subject_id: int):
             signal_length = icustay_length_in_seconds
             if sampling_frequency_magnitude == "minutes":
                 signal_length //= 60
-            signals_dict = get_empty_signals_dict(signal_length, time_range_icustay)
+            signals_dict = get_empty_signals_dict(
+                signal_length,
+                REQUIRED_SIGNALS,
+                time_range_icustay,
+                sampling_frequency_magnitude,
+            )
 
         signals_names_list = [
             re.sub(r"[\s%]", "", item.upper()) for item in fields["sig_name"]
         ]
 
         signals_exist = all(x in signals_names_list for x in REQUIRED_SIGNALS)
+        print(signals_names_list)
+        print(signals_exist)
 
         index_start_signal = get_index_difference(
             time_range_icustay[0],
@@ -144,6 +164,8 @@ def extract_ts_from_subject(subject_id: int):
                 signals_names_list,
                 index_start_signal,
             )
+        print(signals_dict)
 
     df = pd.DataFrame(signals_dict)
-    df.to_csv(f"../../generated_files/ts/signals_{subject_id}.csv", index=False)
+    path = "/home/ricardohb/Documents/generated_files/ts/"
+    df.to_csv(f"{path}signals_{subject_id}.csv", index=False)

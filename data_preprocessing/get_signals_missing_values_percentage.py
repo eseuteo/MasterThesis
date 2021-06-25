@@ -5,16 +5,13 @@ import psycopg2
 import os
 import wfdb
 import urllib.request
-import datetime
 import re
 
 from utils import (
     get_record_from_line,
     get_time_range_icustay,
     get_time_range_record,
-    get_signal_index,
     ranges_overlap,
-    get_delta_earliest_end_latest_start,
 )
 
 
@@ -37,7 +34,9 @@ def export_csv(
     df_missing_values.to_csv(filename)
 
 
-connection = psycopg2.connect(database="mimic", user="holthausen")
+connection = psycopg2.connect(
+    database="mimic", user="mimicuser", password=os.environ["MIMICUSERPASSWORD"]
+)
 cursor = connection.cursor()
 cursor.execute("set search_path to mimiciii")
 
@@ -71,6 +70,8 @@ for index, row in df_waveform_exists.iterrows():
 
     wdb_records = urllib.request.urlopen(wdb_base_path + wdb_dir_path + "RECORDS")
 
+    print(current_user_id)
+
     numerics_files_list = [
         get_record_from_line(line)
         for line in wdb_records.readlines()
@@ -89,7 +90,7 @@ for index, row in df_waveform_exists.iterrows():
                 number_of_icu_stays_column,
                 percentage_missing_values_column,
                 required_signals_available_column,
-                "/data/holthausen/generated_files/missing_values_until_ValueError.csv",
+                "/home/ricardohb/generated_files/missing_values_until_ValueError.csv",
             )
 
         signals_names_list = [
@@ -112,14 +113,6 @@ for index, row in df_waveform_exists.iterrows():
                 record_length_in_seconds / icustay_length_in_seconds
             ) * 100
 
-        print(f"Time range record: {time_range_record[0]} --- {time_range_record[1]}")
-        print(record_length_in_seconds)
-        print(
-            f"Time range icustay: {time_range_icustay[0]} --- {time_range_icustay[1]}"
-        )
-        print(icustay_length_in_seconds)
-        print(percentage_missing_values_column[index])
-
         # if percentage_missing_values_column[index] < 0:
         #     export_csv(
         #         subject_id_column,
@@ -129,10 +122,15 @@ for index, row in df_waveform_exists.iterrows():
         #     )
         #     quit()
 
+    with open("missing_values_current.csv", "a") as file:
+        file.write(
+            f"{row.subject_id},{len(numerics_files_list)},{percentage_missing_values_column[index]},{required_signals_available_column[index]}\n"
+        )
+
 export_csv(
     subject_id_column,
     number_of_icu_stays_column,
     percentage_missing_values_column,
     required_signals_available_column,
-    "/data/holthausen/generated_files/missing_values.csv",
+    "/home/ricardohb/generated_files/missing_values.csv",
 )
