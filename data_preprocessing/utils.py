@@ -29,6 +29,18 @@ def get_time_range_record(fields):
 
 
 def get_time_range_icustay(row):
+    # ###
+    # print(str(row["intime"]))
+    # print(str(row["outtime"]))
+    # print(
+    #     (
+    #         datetime.datetime.strptime(str(row["intime"]), "%Y-%m-%d %H:%M:%S"),
+    #         datetime.datetime.strptime(str(row["outtime"]), "%Y-%m-%d %H:%M:%S"),
+    #     )
+    # )
+
+    # asd
+    # ###
     return (
         datetime.datetime.strptime(str(row["intime"]), "%Y-%m-%d %H:%M:%S"),
         datetime.datetime.strptime(str(row["outtime"]), "%Y-%m-%d %H:%M:%S"),
