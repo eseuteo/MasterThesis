@@ -121,7 +121,7 @@ object MimicDataJob {
       .window(SlidingEventTimeWindows.of(Time.minutes(1000), Time.minutes(1)))
       .process(new Correlation("HR", "HR"))
 
-//    correlation.print()
+    correlation.print()
 
     val mse = mimicDataWithTimestamps
       .keyBy(t => t.label)

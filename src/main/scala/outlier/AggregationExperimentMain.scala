@@ -10,7 +10,6 @@ import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironm
 import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindows, TumblingEventTimeWindows}
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
-import org.joda.time.DateTime
 import util.aggregation.{Average, Max, Min, Stdev}
 import util.interpolation.Interpolation
 
