@@ -171,6 +171,29 @@ under the License.
 			<artifactId>influxdb-java</artifactId>
 			<version>2.10</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.tensorflow</groupId>
+			<artifactId>proto</artifactId>
+			<version>1.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>3.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.tensorflow</groupId>
+			<artifactId>tensorflow</artifactId>
+			<version>1.15.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.tensorflow</groupId>
+			<artifactId>libtensorflow_jni_gpu</artifactId>
+			<version>1.15.0</version>
+		</dependency>
+
+
 	</dependencies>
 
 	<build>
