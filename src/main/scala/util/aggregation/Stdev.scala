@@ -4,7 +4,7 @@ import data.DataPoint
 import org.apache.flink.api.common.functions.AggregateFunction
 
 // items in tuple: label, sum of x, squared sum of x, count
-class Stdev extends AggregateFunction[DataPoint[Double], (Long, String, Double, Double, Long), (Long, String, Double)] {
+class Stdev extends AggregateFunction[DataPoint[Double], (Long, String, Double, Double, Long), DataPoint[Double]] {
   override def createAccumulator(): (Long, String, Double, Double, Long) = (0L, "", 0.0, 0.0, 0L)
 
   override def add(in: DataPoint[Double],
@@ -16,8 +16,8 @@ class Stdev extends AggregateFunction[DataPoint[Double], (Long, String, Double, 
     }
   }
 
-  override def getResult(acc: (Long, String, Double, Double, Long)): (Long, String, Double) = {
-    (acc._1, acc._2, Math.sqrt((acc._4 / acc._5) - (Math.pow(acc._3 / acc._5, 2))))
+  override def getResult(acc: (Long, String, Double, Double, Long)): DataPoint[Double] = {
+    new DataPoint[Double](acc._1, s"stdev${acc._2}", Math.sqrt((acc._4 / acc._5) - (Math.pow(acc._3 / acc._5, 2))))
   }
 
   override def merge(acc: (Long, String, Double, Double, Long),

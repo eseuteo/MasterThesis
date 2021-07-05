@@ -19,7 +19,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
 
-class GenerateSignals {
+object GenerateSignals {
 
   def getMean(signal: DataStream[DataPoint[Double]], orderMA: Long, slideMA: Long) = {
     signal
@@ -57,7 +57,8 @@ class GenerateSignals {
       "ABPDias",
       "ABPMean",
       "RESP",
-      "SpO2"
+      "SpO2",
+      "SOFA_SCORE"
     )
 
     val mimicFile = parameters.getRequired("input")
@@ -115,30 +116,31 @@ class GenerateSignals {
     val respProcessedSignal = processSignal(mimicDataWithTimestamps, "RESP", orderMA, slideMA)
     val abpmProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPMean", orderMA, slideMA)
     val abpsProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPSys", orderMA, slideMA)
-    val abpdprocessedSignal = processSignal(mimicDataWithTimestamps, "ABPDias", orderMA, slideMA)
+    val abpdProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPDias", orderMA, slideMA)
     val spo2ProcessedSignal = processSignal(mimicDataWithTimestamps, "SpO2", orderMA, slideMA)
+    val sofascore = processSignal(mimicDataWithTimestamps, "SOFA_SCORE", orderMA, slideMA)
 
     val hrRespCorrelation = getCorrelation(hrProcessedSignal, respProcessedSignal, "HR", "RESP", orderMA, slideMA)
     val hrAbpmeanCorrelation = getCorrelation(hrProcessedSignal, abpmProcessedSignal, "HR", "ABPMean", orderMA, slideMA)
     val hrAbpsysCorrelation = getCorrelation(hrProcessedSignal, abpsProcessedSignal, "HR", "ABPSys", orderMA, slideMA)
-    val hrAbpdiasCorrelation = getCorrelation(hrProcessedSignal, abpdprocessedSignal, "HR", "ABPDias", orderMA, slideMA)
+    val hrAbpdiasCorrelation = getCorrelation(hrProcessedSignal, abpdProcessedSignal, "HR", "ABPDias", orderMA, slideMA)
     val hrSpo2Correlation = getCorrelation(hrProcessedSignal, spo2ProcessedSignal, "HR", "SpO2", orderMA, slideMA)
     val respAbpmeanCorrelation = getCorrelation(respProcessedSignal, abpmProcessedSignal, "RESP", "ABPMean", orderMA, slideMA)
     val respAbpsysCorrelation = getCorrelation(respProcessedSignal, abpsProcessedSignal, "RESP", "ABPSys", orderMA, slideMA)
-    val respAbpdiasCorrelation = getCorrelation(respProcessedSignal, abpdprocessedSignal, "RESP", "ABPDias", orderMA, slideMA)
+    val respAbpdiasCorrelation = getCorrelation(respProcessedSignal, abpdProcessedSignal, "RESP", "ABPDias", orderMA, slideMA)
     val respSpo2Correlation = getCorrelation(respProcessedSignal, spo2ProcessedSignal, "RESP", "SpO2", orderMA, slideMA)
     val abpmeanAbpsysCorrelation = getCorrelation(abpmProcessedSignal, abpsProcessedSignal, "ABPMean", "ABPSys", orderMA, slideMA)
-    val abpmeanAbpdiasCorrelation = getCorrelation(abpmProcessedSignal, abpdprocessedSignal, "ABPMean", "ABPDias", orderMA, slideMA)
+    val abpmeanAbpdiasCorrelation = getCorrelation(abpmProcessedSignal, abpdProcessedSignal, "ABPMean", "ABPDias", orderMA, slideMA)
     val abpmeanSpo2Correlation = getCorrelation(abpmProcessedSignal, spo2ProcessedSignal, "ABPMean", "SpO2", orderMA, slideMA)
-    val abpsysAbpdiasCorrelation = getCorrelation(abpsProcessedSignal, abpdprocessedSignal, "ABPSys", "ABPDias", orderMA, slideMA)
+    val abpsysAbpdiasCorrelation = getCorrelation(abpsProcessedSignal, abpdProcessedSignal, "ABPSys", "ABPDias", orderMA, slideMA)
     val abpsysSpo2Correlation = getCorrelation(abpsProcessedSignal, spo2ProcessedSignal, "ABPSys", "SpO2", orderMA, slideMA)
-    val abpdiasSpo2Correlation = getCorrelation(abpdprocessedSignal, spo2ProcessedSignal, "ABPDias", "SpO2", orderMA, slideMA)
+    val abpdiasSpo2Correlation = getCorrelation(abpdProcessedSignal, spo2ProcessedSignal, "ABPDias", "SpO2", orderMA, slideMA)
 
     val mseHR = getMultiScaleEntropy(hrProcessedSignal, "HR")
     val mseRESP = getMultiScaleEntropy(respProcessedSignal, "RESP")
     val mseABPMean = getMultiScaleEntropy(abpmProcessedSignal, "ABPMean")
     val mseABPSys = getMultiScaleEntropy(abpsProcessedSignal, "ABPSys")
-    val mseABPDias = getMultiScaleEntropy(abpdprocessedSignal, "ABPDias")
+    val mseABPDias = getMultiScaleEntropy(abpdProcessedSignal, "ABPDias")
     val mseSpO2 = getMultiScaleEntropy(spo2ProcessedSignal, "SpO2")
 
     val meanHR = getMean(hrProcessedSignal, orderMA, slideMA)
@@ -161,15 +163,63 @@ class GenerateSignals {
     val minABPSys = getMin(abpsProcessedSignal, orderMA, slideMA)
     val maxABPSys = getMax(abpsProcessedSignal, orderMA, slideMA)
 
-    val meanABPDias = getMean(abpdprocessedSignal, orderMA, slideMA)
-    val stdevABPDias = getStdev(abpdprocessedSignal, orderMA, slideMA)
-    val minABPDias = getMin(abpdprocessedSignal, orderMA, slideMA)
-    val maxABPDias = getMax(abpdprocessedSignal, orderMA, slideMA)
+    val meanABPDias = getMean(abpdProcessedSignal, orderMA, slideMA)
+    val stdevABPDias = getStdev(abpdProcessedSignal, orderMA, slideMA)
+    val minABPDias = getMin(abpdProcessedSignal, orderMA, slideMA)
+    val maxABPDias = getMax(abpdProcessedSignal, orderMA, slideMA)
 
     val meanSpO2 = getMean(spo2ProcessedSignal, orderMA, slideMA)
     val stdevSpO2 = getStdev(spo2ProcessedSignal, orderMA, slideMA)
     val minSpO2 = getMin(spo2ProcessedSignal, orderMA, slideMA)
     val maxSpO2 = getMax(spo2ProcessedSignal, orderMA, slideMA)
+
+    hrProcessedSignal
+      .union(respProcessedSignal)
+      .union(abpmProcessedSignal)
+      .union(abpsProcessedSignal)
+      .union(abpdProcessedSignal)
+      .union(spo2ProcessedSignal)
+      .union(hrRespCorrelation)
+      .union(hrAbpmeanCorrelation)
+      .union(hrAbpsysCorrelation)
+      .union(hrAbpdiasCorrelation)
+      .union(hrSpo2Correlation)
+      .union(respAbpmeanCorrelation)
+      .union(respAbpsysCorrelation)
+      .union(respAbpdiasCorrelation)
+      .union(respSpo2Correlation)
+      .union(abpmeanAbpsysCorrelation)
+      .union(abpmeanAbpdiasCorrelation)
+      .union(abpmeanSpo2Correlation)
+      .union(abpsysAbpdiasCorrelation)
+      .union(abpsysSpo2Correlation)
+      .union(abpdiasSpo2Correlation)
+      .union(meanHR)
+      .union(stdevHR)
+      .union(minHR)
+      .union(maxHR)
+      .union(meanRESP)
+      .union(stdevRESP)
+      .union(minRESP)
+      .union(maxRESP)
+      .union(meanABPMean)
+      .union(stdevABPMean)
+      .union(minABPMean)
+      .union(maxABPMean)
+      .union(meanABPSys)
+      .union(stdevABPSys)
+      .union(minABPSys)
+      .union(maxABPSys)
+      .union(meanABPDias)
+      .union(stdevABPDias)
+      .union(minABPDias)
+      .union(maxABPDias)
+      .union(meanSpO2)
+      .union(stdevSpO2)
+      .union(minSpO2)
+      .union(maxSpO2)
+
+
 
     env.execute("MimicDataJob")
 
@@ -194,7 +244,7 @@ class GenerateSignals {
       dataPoint
     }).keyBy(t => t.key)
       .window(SlidingEventTimeWindows.of(Time.minutes(windowSize), Time.minutes(windowSlide)))
-      .process(new Correlation(labelA, labelB))
+      .process(new Correlation(labelA, labelB, windowSizeInMinutes = windowSize))
   }
 
   def processSignal(signal: DataStream[DataPoint[Double]],
@@ -206,7 +256,7 @@ class GenerateSignals {
       .filter(t => t.label == label)
       .keyBy(t => t.label)
       .window(SlidingEventTimeWindows.of(Time.minutes(windowSize), Time.minutes(windowSlide)))
-      .process(new Interpolation(mode="linear"))
+      .process(new Interpolation(mode="linear", windowSizeInMinutes = windowSize))
       .keyBy(t => t.label)
       .map(new ZScoreCalculation())
       .filter(t => t.zScore > -3 && t.zScore < 3)

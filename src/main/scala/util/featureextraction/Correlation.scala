@@ -4,8 +4,9 @@ import data.DataPoint
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
+import util.interpolation.InterpolationUtils.getTimestampOffset
 
-class Correlation(signalA: String, signalB: String) extends ProcessWindowFunction[DataPoint[Double], Double, String, TimeWindow] {
+class Correlation(signalA: String, signalB: String, windowSizeInMinutes: Long) extends ProcessWindowFunction[DataPoint[Double], DataPoint[Double], String, TimeWindow] {
 
   override def process(key: String, context: Context,
                        elements: Iterable[DataPoint[Double]],
@@ -18,6 +19,12 @@ class Correlation(signalA: String, signalB: String) extends ProcessWindowFunctio
     var sxx: Double = 0.0
     var syy: Double = 0.0
     var sxy: Double = 0.0
+
+    val timestampOffset = getTimestampOffset(context.window, elements.toList, windowSize)
+
+    val expectedTimestamp: Long = {
+      context.window.getStart - timestampOffset + (context.window.getEnd - context.window.getStart) / 2
+    }
 
     for ((x, y) <- (listX zip listY)) {
       sx += x.value
@@ -32,6 +39,6 @@ class Correlation(signalA: String, signalB: String) extends ProcessWindowFunctio
     val sigmax: Double = math.sqrt(sxx / n - sx * sx / n / n)
     val sigmay: Double = math.sqrt(syy / n - sy * sy / n / n)
 
-    out.collect(cov / sigmax / sigmay)
+    out.collect(new DataPoint[Double](expectedTimestamp, s"Corr$signalA$signalB", cov / sigmax / sigmay)
   }
 }
