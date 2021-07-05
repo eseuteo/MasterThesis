@@ -3,7 +3,7 @@ package util.aggregation
 import data.DataPoint
 import org.apache.flink.api.common.functions.AggregateFunction
 
-class Max extends AggregateFunction[DataPoint[Double], (Long, String, Double), (Long, String, Double)]{
+class Max extends AggregateFunction[DataPoint[Double], (Long, String, Double), DataPoint[Double]]{
   override def createAccumulator(): (Long, String, Double) = (0L, "", Double.MinValue)
 
   override def add(in: DataPoint[Double],
@@ -15,7 +15,7 @@ class Max extends AggregateFunction[DataPoint[Double], (Long, String, Double), (
     }
   }
 
-  override def getResult(acc: (Long, String, Double)): (Long, String, Double) = acc
+  override def getResult(acc: (Long, String, Double)): DataPoint[Double] = new DataPoint[Double](acc._1, s"max${acc._2}", acc._3)
 
   override def merge(acc: (Long, String, Double),
                      acc1: (Long, String, Double)): (Long, String, Double) = {

@@ -8,11 +8,11 @@ import util.interpolation.InterpolationUtils.getTimestampOffset
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator
 import org.apache.commons.math3.exception.{NumberIsTooSmallException, OutOfRangeException}
 
-class Interpolation(timeMeasure: String = "minutes", slideSizeInMinutes: Int = 10, mode: String = "linear")
+class Interpolation(timeMeasure: String = "minutes", windowSizeInMinutes: Long = 10, mode: String = "linear")
   extends ProcessWindowFunction[DataPoint[Double], DataPoint[Double], String, TimeWindow] {
   override def process(key: String, context: Context, elements: Iterable[DataPoint[Double]],
                        out: Collector[DataPoint[Double]]): Unit = {
-    val timestampOffset = getTimestampOffset(context.window, elements.toList, slideSizeInMinutes)
+    val timestampOffset = getTimestampOffset(context.window, elements.toList, windowSizeInMinutes)
 
     val expectedTimestamp: Long = {
       context.window.getStart - timestampOffset + (context.window.getEnd - context.window.getStart) / 2

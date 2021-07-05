@@ -11,6 +11,6 @@ class DataPoint[T](val t: Long = 0, val label: String = null, val value: T = nul
   override def toString = {
     val date = new Date(t)
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
-    s"${sdf.format(date)},$label,$value"
+    s"${sdf.format(date)},$label,$value,$zScore"
   }
 }
