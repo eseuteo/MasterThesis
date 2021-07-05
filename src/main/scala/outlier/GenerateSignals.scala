@@ -6,8 +6,10 @@ import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindows, TumblingEventTimeWindows}
+import org.apache.flink.streaming.api.windowing.assigners.{GlobalWindows, SlidingEventTimeWindows, TumblingEventTimeWindows}
 import org.apache.flink.streaming.api.windowing.time.Time
+import org.apache.flink.streaming.api.windowing.triggers.{CountTrigger, EventTimeTrigger, PurgingTrigger}
+import org.apache.flink.streaming.api.windowing.windows.GlobalWindow
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.ZScoreCalculation
 import util.aggregation.{Average, Max, Min, Stdev}
@@ -136,12 +138,12 @@ object GenerateSignals {
     val abpsysSpo2Correlation = getCorrelation(abpsProcessedSignal, spo2ProcessedSignal, "ABPSys", "SpO2", orderMA, slideMA)
     val abpdiasSpo2Correlation = getCorrelation(abpdProcessedSignal, spo2ProcessedSignal, "ABPDias", "SpO2", orderMA, slideMA)
 
-    val mseHR = getMultiScaleEntropy(hrProcessedSignal, "HR")
-    val mseRESP = getMultiScaleEntropy(respProcessedSignal, "RESP")
-    val mseABPMean = getMultiScaleEntropy(abpmProcessedSignal, "ABPMean")
-    val mseABPSys = getMultiScaleEntropy(abpsProcessedSignal, "ABPSys")
-    val mseABPDias = getMultiScaleEntropy(abpdProcessedSignal, "ABPDias")
-    val mseSpO2 = getMultiScaleEntropy(spo2ProcessedSignal, "SpO2")
+    val sampleEntropyHR = getSampleEntropy(hrProcessedSignal, "HR", orderMA)
+    val sampleEntropyRESP = getSampleEntropy(respProcessedSignal, "RESP", orderMA)
+    val sampleEntropyABPMean = getSampleEntropy(abpmProcessedSignal, "ABPMean", orderMA)
+    val sampleEntropyABPSys = getSampleEntropy(abpsProcessedSignal, "ABPSys", orderMA)
+    val sampleEntropyABPDias = getSampleEntropy(abpdProcessedSignal, "ABPDias", orderMA)
+    val sampleEntropySpO2 = getSampleEntropy(spo2ProcessedSignal, "SpO2", orderMA)
 
     val meanHR = getMean(hrProcessedSignal, orderMA, slideMA)
     val stdevHR = getStdev(hrProcessedSignal, orderMA, slideMA)
@@ -172,6 +174,7 @@ object GenerateSignals {
     val stdevSpO2 = getStdev(spo2ProcessedSignal, orderMA, slideMA)
     val minSpO2 = getMin(spo2ProcessedSignal, orderMA, slideMA)
     val maxSpO2 = getMax(spo2ProcessedSignal, orderMA, slideMA)
+
 
     hrProcessedSignal
       .union(respProcessedSignal)
@@ -218,6 +221,20 @@ object GenerateSignals {
       .union(stdevSpO2)
       .union(minSpO2)
       .union(maxSpO2)
+      .union(sampleEntropyHR)
+      .union(sampleEntropyRESP)
+      .union(sampleEntropyABPMean)
+      .union(sampleEntropyABPSys)
+      .union(sampleEntropyABPDias)
+      .union(sampleEntropySpO2)
+      .union(sofascore)
+      .keyBy(t => t.t)
+      .window(TumblingEventTimeWindows.of(Time.minutes(1)))
+      .trigger(CountTrigger.of(52))
+      .process(new GenerateSignalsMap())
+      .print()
+//      .aggregate(new GenerateSignalsAggregate())
+//      .print()
 
 
 
@@ -229,11 +246,12 @@ object GenerateSignals {
     signalA.join(signalB).where(t => t.t).equalTo(t => t.t)
   }
 
-  def getMultiScaleEntropy(signal: DataStream[DataPoint[Double]], label: String) = {
+  def getSampleEntropy(signal: DataStream[DataPoint[Double]], label: String, orderMA: Long) = {
     signal
       .keyBy(t => t.label)
-      .window(TumblingEventTimeWindows.of(Time.minutes(100)))
-      .process(new MultiScaleEntropy(0.1, 5, 5))
+      .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(1)))
+      .process(new MultiScaleEntropy(0.01, 1, 2))
+      .map(t => new DataPoint[Double](t._1, s"Entropy$label", t._4))
   }
 
   def getCorrelation(signalA: DataStream[DataPoint[Double]], signalB: DataStream[DataPoint[Double]], labelA: String, labelB: String, windowSize: Long, windowSlide: Long) = {

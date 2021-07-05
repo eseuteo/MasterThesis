@@ -4,6 +4,7 @@ import data.DataPoint
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
+import util.interpolation.InterpolationUtils.getTimestampOffset
 
 import scala.collection.mutable.ListBuffer
 
@@ -30,7 +31,7 @@ class MultiScaleEntropy(r: Double, tau: Int, mMax: Int) extends ProcessWindowFun
 
     for (i <- 0 until listMSE.length) {
       for (j <- 0 until listMSE(i).length) {
-        out.collect((context.window.getStart, i, j, listMSE(i)(j)))
+        out.collect((elements.toList(elements.size/2).t, i, j, listMSE(i)(j)))
       }
     }
   }
