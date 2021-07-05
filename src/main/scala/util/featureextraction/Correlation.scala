@@ -10,7 +10,7 @@ class Correlation(signalA: String, signalB: String, windowSizeInMinutes: Long) e
 
   override def process(key: String, context: Context,
                        elements: Iterable[DataPoint[Double]],
-                       out: Collector[Double]): Unit = {
+                       out: Collector[DataPoint[Double]]): Unit = {
     val listX = elements.filter(elem => elem.label.equals(signalA))
     val listY = elements.filter(elem => elem.label.equals(signalB))
 
@@ -19,12 +19,6 @@ class Correlation(signalA: String, signalB: String, windowSizeInMinutes: Long) e
     var sxx: Double = 0.0
     var syy: Double = 0.0
     var sxy: Double = 0.0
-
-    val timestampOffset = getTimestampOffset(context.window, elements.toList, windowSize)
-
-    val expectedTimestamp: Long = {
-      context.window.getStart - timestampOffset + (context.window.getEnd - context.window.getStart) / 2
-    }
 
     for ((x, y) <- (listX zip listY)) {
       sx += x.value
@@ -39,6 +33,6 @@ class Correlation(signalA: String, signalB: String, windowSizeInMinutes: Long) e
     val sigmax: Double = math.sqrt(sxx / n - sx * sx / n / n)
     val sigmay: Double = math.sqrt(syy / n - sy * sy / n / n)
 
-    out.collect(new DataPoint[Double](expectedTimestamp, s"Corr$signalA$signalB", cov / sigmax / sigmay)
+    out.collect(new DataPoint[Double](elements.toList(elements.size/2).t, s"Corr$signalA$signalB", cov / sigmax / sigmay))
   }
 }

@@ -119,7 +119,7 @@ object MimicDataJob {
       dataPoint
     }).keyBy(t => t.key)
       .window(SlidingEventTimeWindows.of(Time.minutes(1000), Time.minutes(1)))
-      .process(new Correlation("HR", "HR"))
+      .process(new Correlation("HR", "HR", windowSizeInMinutes = orderMA))
 
     correlation.print()
 

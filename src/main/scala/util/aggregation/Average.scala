@@ -8,7 +8,7 @@ class Average extends AggregateFunction[DataPoint[Double], (Long, String, Double
 
   override def add(in: DataPoint[Double],
                    acc: (Long, String, Double, Int)): (Long, String, Double, Int) = {
-    if (acc._1 == "") {
+    if (acc._2 == "") {
       (in.t, in.label, in.value, 1)
     } else {
       (math.max(in.t, acc._1), in.label, acc._3 + in.value, acc._4 + 1)
