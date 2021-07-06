@@ -26,28 +26,28 @@ object GenerateSignals {
   def getMean(signal: DataStream[DataPoint[Double]], orderMA: Long, slideMA: Long) = {
     signal
       .keyBy(t => t.label)
-      .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(slideMA)))
+      .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
       .aggregate(new Average())
   }
 
   def getStdev(signal: DataStream[DataPoint[Double]], orderMA: Long, slideMA: Long) = {
     signal
       .keyBy(t => t.label)
-      .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(slideMA)))
+      .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
       .aggregate(new Stdev())
   }
 
   def getMin(signal: DataStream[DataPoint[Double]], orderMA: Long, slideMA: Long) = {
     signal
       .keyBy(t => t.label)
-      .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(slideMA)))
+      .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
       .aggregate(new Min())
   }
 
   def getMax(signal: DataStream[DataPoint[Double]], orderMA: Long, slideMA: Long) = {
     signal
       .keyBy(t => t.label)
-      .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(slideMA)))
+      .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
       .aggregate(new Max())
   }
 
@@ -114,13 +114,13 @@ object GenerateSignals {
       })
       .assignTimestampsAndWatermarks(watermarkStrategy)
 
-    val hrProcessedSignal = processSignal(mimicDataWithTimestamps, "HR", orderMA, slideMA)
-    val respProcessedSignal = processSignal(mimicDataWithTimestamps, "RESP", orderMA, slideMA)
-    val abpmProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPMean", orderMA, slideMA)
-    val abpsProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPSys", orderMA, slideMA)
-    val abpdProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPDias", orderMA, slideMA)
-    val spo2ProcessedSignal = processSignal(mimicDataWithTimestamps, "SpO2", orderMA, slideMA)
-    val sofascore = processSignal(mimicDataWithTimestamps, "SOFA_SCORE", orderMA, slideMA)
+    val hrProcessedSignal = processSignal(mimicDataWithTimestamps, "HR", 60, 1)
+    val respProcessedSignal = processSignal(mimicDataWithTimestamps, "RESP", 60, 1)
+    val abpmProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPMean", 60, 1)
+    val abpsProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPSys", 60, 1)
+    val abpdProcessedSignal = processSignal(mimicDataWithTimestamps, "ABPDias", 60, 1)
+    val spo2ProcessedSignal = processSignal(mimicDataWithTimestamps, "SpO2", 60, 1)
+    val sofascore = processSignal(mimicDataWithTimestamps, "SOFA_SCORE", 60, 60)
 
     val hrRespCorrelation = getCorrelation(hrProcessedSignal, respProcessedSignal, "HR", "RESP", orderMA, slideMA)
     val hrAbpmeanCorrelation = getCorrelation(hrProcessedSignal, abpmProcessedSignal, "HR", "ABPMean", orderMA, slideMA)
@@ -137,6 +137,7 @@ object GenerateSignals {
     val abpsysAbpdiasCorrelation = getCorrelation(abpsProcessedSignal, abpdProcessedSignal, "ABPSys", "ABPDias", orderMA, slideMA)
     val abpsysSpo2Correlation = getCorrelation(abpsProcessedSignal, spo2ProcessedSignal, "ABPSys", "SpO2", orderMA, slideMA)
     val abpdiasSpo2Correlation = getCorrelation(abpdProcessedSignal, spo2ProcessedSignal, "ABPDias", "SpO2", orderMA, slideMA)
+    val test = getCorrelation(hrProcessedSignal, hrProcessedSignal, "HR", "HR", orderMA, slideMA).print()
 
     val sampleEntropyHR = getSampleEntropy(hrProcessedSignal, "HR", orderMA)
     val sampleEntropyRESP = getSampleEntropy(respProcessedSignal, "RESP", orderMA)
@@ -175,14 +176,22 @@ object GenerateSignals {
     val minSpO2 = getMin(spo2ProcessedSignal, orderMA, slideMA)
     val maxSpO2 = getMax(spo2ProcessedSignal, orderMA, slideMA)
 
+    val sofascoreProcessed = mimicDataWithTimestamps
+      .filter(t => t.label == "SOFA_SCORE")
+      .keyBy(t => t.label)
+      .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
+      .process(new SofaTumblingWindow())
 
-    hrProcessedSignal
-      .union(respProcessedSignal)
-      .union(abpmProcessedSignal)
-      .union(abpsProcessedSignal)
-      .union(abpdProcessedSignal)
-      .union(spo2ProcessedSignal)
-      .union(hrRespCorrelation)
+
+//    hrProcessedSignal
+//      .union(respProcessedSignal)
+//      .union(abpmProcessedSignal)
+//      .union(abpsProcessedSignal)
+//      .union(abpdProcessedSignal)
+//      .union(spo2ProcessedSignal)
+//      hrRespCorrelation.join(hrAbpmeanCorrelation).where(t => t.t).equalTo(t => t.t).window(())
+
+      hrRespCorrelation
       .union(hrAbpmeanCorrelation)
       .union(hrAbpsysCorrelation)
       .union(hrAbpdiasCorrelation)
@@ -229,9 +238,9 @@ object GenerateSignals {
       .union(sampleEntropySpO2)
       .union(sofascore)
       .keyBy(t => t.t)
-      .window(TumblingEventTimeWindows.of(Time.minutes(1)))
-      .trigger(CountTrigger.of(52))
-      .process(new GenerateSignalsMap())
+      .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
+      .trigger(CountTrigger.of(46))
+      .process(GenerateSignalsMap())
       .print()
 //      .aggregate(new GenerateSignalsAggregate())
 //      .print()
@@ -249,7 +258,7 @@ object GenerateSignals {
   def getSampleEntropy(signal: DataStream[DataPoint[Double]], label: String, orderMA: Long) = {
     signal
       .keyBy(t => t.label)
-      .window(SlidingEventTimeWindows.of(Time.minutes(orderMA), Time.minutes(1)))
+      .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
       .process(new MultiScaleEntropy(0.01, 1, 2))
       .map(t => new DataPoint[Double](t._1, s"Entropy$label", t._4))
   }
@@ -261,7 +270,7 @@ object GenerateSignals {
       dataPoint.key = "1"
       dataPoint
     }).keyBy(t => t.key)
-      .window(SlidingEventTimeWindows.of(Time.minutes(windowSize), Time.minutes(windowSlide)))
+      .window(TumblingEventTimeWindows.of(Time.minutes(windowSize)))
       .process(new Correlation(labelA, labelB, windowSizeInMinutes = windowSize))
   }
 
@@ -271,6 +280,7 @@ object GenerateSignals {
                     windowSlide: Long):
   DataStream[DataPoint[Double]] = {
     signal
+      .filter(t => t.value != -1.0)
       .filter(t => t.label == label)
       .keyBy(t => t.label)
       .window(SlidingEventTimeWindows.of(Time.minutes(windowSize), Time.minutes(windowSlide)))

@@ -31,7 +31,7 @@ class MultiScaleEntropy(r: Double, tau: Int, mMax: Int) extends ProcessWindowFun
 
     for (i <- 0 until listMSE.length) {
       for (j <- 0 until listMSE(i).length) {
-        out.collect((elements.toList(elements.size/2).t, i, j, listMSE(i)(j)))
+        out.collect((elements.toList(elements.size-1).t, i, j, listMSE(i)(j)))
       }
     }
   }

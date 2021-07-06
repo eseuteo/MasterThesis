@@ -33,6 +33,6 @@ class Correlation(signalA: String, signalB: String, windowSizeInMinutes: Long) e
     val sigmax: Double = math.sqrt(sxx / n - sx * sx / n / n)
     val sigmay: Double = math.sqrt(syy / n - sy * sy / n / n)
 
-    out.collect(new DataPoint[Double](elements.toList(elements.size/2).t, s"Corr$signalA$signalB", cov / sigmax / sigmay))
+    out.collect(new DataPoint[Double](elements.toList(elements.size-1).t, s"Corr$signalA$signalB", cov / sigmax / sigmay))
   }
 }

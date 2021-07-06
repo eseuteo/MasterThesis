@@ -14,9 +14,8 @@ case class GenerateSignalsMap() extends ProcessWindowFunction[DataPoint[Double],
                        elements: Iterable[DataPoint[Double]],
                        out: Collector[(Long, String)]): Unit = {
     val signalsMap = new mutable.HashMap[String, Double]()
-    val normalizedLabels = List("HR", "RESP", "ABPMean", "ABPSys", "ABPDias", "SpO2", "SOFA_SCORE")
     elements.map(t => {
-      val dataPointValue: Double = if (normalizedLabels.contains(t.label)) t.zScore else t.value
+      val dataPointValue: Double = t.value
       signalsMap.put(t.label, dataPointValue)
     })
 
@@ -25,7 +24,7 @@ case class GenerateSignalsMap() extends ProcessWindowFunction[DataPoint[Double],
     val sampEnLabels = basicLabels.map(t => s"Entropy$t")
     val otherLabels = basicLabels.flatMap(t => List(s"stdev$t", s"avg$t", s"min$t", s"max$t")).toList
 
-    val allLabels = basicLabels ++ correlationLabels ++ sampEnLabels ++ otherLabels ++ List("SOFA_SCORE")
+    val allLabels = correlationLabels ++ sampEnLabels ++ otherLabels ++ List("SOFA_SCORE")
 
     val date = new Date(elements.toList(0).t)
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
