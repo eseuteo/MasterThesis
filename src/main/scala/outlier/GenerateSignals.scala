@@ -13,7 +13,7 @@ import org.apache.flink.streaming.api.windowing.windows.GlobalWindow
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.ZScoreCalculation
 import util.aggregation.{Average, Max, Min, Stdev}
-import util.featureextraction.{Correlation, MultiScaleEntropy}
+import util.featureextraction.{Correlation, MultiScaleEntropy, SampleEntropy}
 import util.interpolation.Interpolation
 
 import java.time.{LocalDateTime, ZoneId}
