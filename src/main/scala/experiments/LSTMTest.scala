@@ -15,12 +15,9 @@ import org.apache.flink.api.java.tuple.Tuple5
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows
 import org.apache.flink.streaming.api.windowing.time.Time
-import org.apache.flink.streaming.api.windowing.triggers.CountTrigger
 
-import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneId}
-import java.util.Date
 
 object LSTMTest {
   def main(args: Array[String]): Unit = {
@@ -31,7 +28,7 @@ object LSTMTest {
     val lstmModelDir = parameters.getRequired("modelDir")
 
     val vitals =
-      env.readTextFile(fileName).filter(t => !t.contains("DateVitals"))
+      env.readTextFile(fileName).filter(t => !t.contains("TIME"))
 
     val watermarkStrategy = WatermarkStrategy
       .forMonotonousTimestamps()
@@ -52,8 +49,10 @@ object LSTMTest {
         new Tuple4[String, Long, String, Array[Double]](
           "patientId",
           getTimestamp(data(1)),
-          data(23),
-          data.slice(2, 22).map(t => t.toDouble)
+          data(48),
+          data
+            .slice(2, 47)
+            .map(_.toDouble)
         )
       })
       .assignTimestampsAndWatermarks(watermarkStrategy)
@@ -65,16 +64,6 @@ object LSTMTest {
         .process(new LSTMSequenceClassifier(lstmModelDir))
 
     output.print()
-//        .window(SlidingEventTimeWindows.of(Time.hours(3), Time.hours(1)))
-//        .process(new LSTMSequenceClassifier(lstmModelDir))
-
-//    val sequenceClass = vitalsWithTimestamps
-//      .keyBy(t => t)
-//      .window(SlidingEventTimeWindows.of(Time.hours(3), Time.hours(1)))
-//      .trigger(CountTrigger.of(3))
-//      .process(new LSTMSequenceClassifier(lstmModelDir))
-
-//    sequenceClass.print()
 
     env.execute("LSTMTest")
   }

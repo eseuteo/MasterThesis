@@ -59,7 +59,7 @@ if __name__ == "__main__":
     scaler = StandardScaler()
     # pick a window size
     # sequence_length = 3
-    path = "./matched_six_vs_cli_onset/Shock-patient_id-69272_new_version.csv"
+    path = "./matched_six_vs_cli_onset/Non-shock-Patient_id-89734_new_version.csv"
     # path = "./matched_six_vs_cli_onset/Shock-Patient_id-69272_new_version.csv"
     # path = './matched_six_vs_cli_onset/Shock-Patient_id-89091-vs-cli.csv'
     # path = './matched_six_vs_cli_onset/Shock-patient_id-69272-vs-cli.csv'
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     #     "sofa_Score",
     #     "mylabel",
     # ]
-    sequence_cols_all = list(train_df.columns.values)[1:] + ["mylabel"]
+    sequence_cols_all = list(train_df.columns.values) + ["mylabel"]
 
     # first scale the values we are using as features
     train_df[sequence_cols] = scaler.fit_transform(train_df[sequence_cols])
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     train_df = pd.concat([train_df, label_encoding], axis=1)
 
     # save train data to test with the Java LSTMTest
-    train_df.to_csv("train_seq_data.csv")
+    train_df.to_csv("train_seq_data_new.csv")
 
     # generate the sequences, of size sequence_length
     seq_gen = list(gen_sequence(train_df, sequence_length, sequence_cols))
@@ -154,8 +154,10 @@ if __name__ == "__main__":
     # Create model
     # number of features
     nb_features = seq_array.shape[2]
+    print(nb_features)
     # number of classes
     nb_out = label_array.shape[1]
+    print(nb_out)
 
     # create model
     # model = vi.create_bi_model(nb_features, nb_out)
@@ -240,6 +242,6 @@ if __name__ == "__main__":
     #                    outputs= {t.name: t for t in model.outputs})
 
     # save the model
-    model_name = "lstm_model_vitals"
+    model_name = "lstm_model_vitals_new"
     model_path = os.path.join(model_name)
     tf.saved_model.save(model, model_path)
