@@ -28,6 +28,7 @@ class LSTMSequenceClassifier(
       elements: Iterable[Tuple4[String, Long, String, Array[Double]]],
       out: Collector[Tuple5[String, String, String, Double, Double]]
   ): Unit = {
+
     var events: util.ArrayList[Array[Double]] =
       new util.ArrayList[Array[Double]]()
 

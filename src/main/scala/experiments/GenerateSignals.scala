@@ -130,7 +130,8 @@ object GenerateSignals {
     env.setParallelism(1)
     env.getConfig.enableObjectReuse()
 
-    val mimicData = env.readTextFile(mimicFile)
+    val mimicData =
+      env.readTextFile(mimicFile).filter(t => !t.contains("TIME"))
 
     val watermarkStrategy = WatermarkStrategy
       .forMonotonousTimestamps()
