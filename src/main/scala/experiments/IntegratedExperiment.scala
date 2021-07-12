@@ -43,6 +43,20 @@ import java.util.Properties
 import scala.collection.mutable.ListBuffer
 
 object IntegratedExperiment {
+  // Arguments for running the program:
+//  --input
+//  ./src/main/resources/mimic2wdb/train-set/C1/signals_66152_processed.csv
+//  --orderMA
+//    60
+//  --slideMA
+//    1
+//  --output
+//    generatedSignal.csv
+//  --kafkaTopic
+//    mimicdata
+//  --modelDir
+//    "FlinkSequences/seq_classification/python/lstm_model_vitals_new/"
+
   def main(args: Array[String]): Unit = {
     val parameters: ParameterTool = ParameterTool.fromArgs(args)
     val signals =
