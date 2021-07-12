@@ -1,4 +1,4 @@
-package util
+package util.outlierevaluation
 
 import data.DataPoint
 import org.apache.commons.math3.util.FastMath.abs
@@ -16,7 +16,6 @@ class OutlierEvaluation(range: Double, k: Int)
       elements: Iterable[DataPoint[Double]],
       out: Collector[DataPoint[Double]]
   ): Unit = {
-  //  println(context.window.getEnd)
     val inputList = elements.toList
     println(inputList.length)
 

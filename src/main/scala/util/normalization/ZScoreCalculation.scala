@@ -1,11 +1,10 @@
-package util
+package util.normalization
 
 import data.DataPoint
 import org.apache.flink.api.common.functions.RichMapFunction
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
+import org.apache.flink.configuration.Configuration
 
 class ZScoreCalculation extends RichMapFunction[DataPoint[Double], DataPoint[Double]] {
   private var zScoreState : ValueState[(Integer, Double, Double)] = _

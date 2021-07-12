@@ -59,9 +59,7 @@ if __name__ == "__main__":
     scaler = StandardScaler()
     # pick a window size
     # sequence_length = 3
-    path = "./matched_six_vs_cli_onset/Shock-patient_id-69272_new_version.csv"
-    # path = "./matched_six_vs_cli_onset/Shock-Patient_id-69272_new_version.csv"
-    # path = './matched_six_vs_cli_onset/Shock-Patient_id-89091-vs-cli.csv'
+    path = "./matched_six_vs_cli_onset/Shock-Patient_id-89091-vs-cli.csv"
     # path = './matched_six_vs_cli_onset/Shock-patient_id-69272-vs-cli.csv'
     # path = './matched_six_vs_cli_onset/Non-shock-Patient_id-66152-vs-cli.csv'
     # path = '-/matched_six_vs_cli_onset/Non-shock-Patient_id-89734-vs-cli.csv'
@@ -69,71 +67,64 @@ if __name__ == "__main__":
 
     # pick the feature columns
     # sequence_cols = ['hr','abpSys','abpDias','abpMean','resp','sp02','SDhr','SDresp','SDsp02']
-    # sequence_cols = [
-    #     "hr",
-    #     "abpSys",
-    #     "abpDias",
-    #     "abpMean",
-    #     "resp",
-    #     "sp02",
-    #     "SDhr",
-    #     "SDabpSys",
-    #     "SDabpDias",
-    #     "SDabpMean",
-    #     "SDresp",
-    #     "SDsp02",
-    #     "SEhr",
-    #     "SEresp",
-    #     "CorHRabpSys",
-    #     "CorHRabpDias",
-    #     "CorHRabpMean",
-    #     "CorHRresp",
-    #     "CorHRsp02",
-    #     "CorRespSp02",
-    # ]
-    sequence_cols = list(train_df.columns.values)[1:-1]
-
-    # sequence_cols_all = [
-    #     "DateVitals",
-    #     "hr",
-    #     "abpSys",
-    #     "abpDias",
-    #     "abpMean",
-    #     "resp",
-    #     "sp02",
-    #     "SDhr",
-    #     "SDabpSys",
-    #     "SDabpDias",
-    #     "SDabpMean",
-    #     "SDresp",
-    #     "SDsp02",
-    #     "SEhr",
-    #     "SEresp",
-    #     "CorHRabpSys",
-    #     "CorHRabpDias",
-    #     "CorHRabpMean",
-    #     "CorHRresp",
-    #     "CorHRsp02",
-    #     "CorRespSp02",
-    #     "sofa_Score",
-    #     "mylabel",
-    # ]
-    sequence_cols_all = list(train_df.columns.values)[1:] + ["mylabel"]
+    sequence_cols = [
+        "hr",
+        "abpSys",
+        "abpDias",
+        "abpMean",
+        "resp",
+        "sp02",
+        "SDhr",
+        "SDabpSys",
+        "SDabpDias",
+        "SDabpMean",
+        "SDresp",
+        "SDsp02",
+        "SEhr",
+        "SEresp",
+        "CorHRabpSys",
+        "CorHRabpDias",
+        "CorHRabpMean",
+        "CorHRresp",
+        "CorHRsp02",
+        "CorRespSp02",
+    ]
+    sequence_cols_all = [
+        "DateVitals",
+        "hr",
+        "abpSys",
+        "abpDias",
+        "abpMean",
+        "resp",
+        "sp02",
+        "SDhr",
+        "SDabpSys",
+        "SDabpDias",
+        "SDabpMean",
+        "SDresp",
+        "SDsp02",
+        "SEhr",
+        "SEresp",
+        "CorHRabpSys",
+        "CorHRabpDias",
+        "CorHRabpMean",
+        "CorHRresp",
+        "CorHRsp02",
+        "CorRespSp02",
+        "sofa_Score",
+        "mylabel",
+    ]
 
     # first scale the values we are using as features
     train_df[sequence_cols] = scaler.fit_transform(train_df[sequence_cols])
 
     # here I am adding a label based on the sofa_Score
     # sofa_threshold = 5
-    # train_df["mylabel"] = np.where(
-    #     train_df.sofa_Score > sofa_threshold, "shock", "Nonshock"
-    # )
     train_df["mylabel"] = np.where(
-        train_df["SOFA_SCORE"] > sofa_threshold, "shock", "Nonshock"
+        train_df.sofa_Score > sofa_threshold, "shock", "Nonshock"
     )
-
     train_df = train_df.loc[:, sequence_cols_all]
-    label_encoding = pd.get_dummies(train_df["mylabel"])
+    label_encoding = pd.get_dummies(train_df.mylabel)
     train_df = pd.concat([train_df, label_encoding], axis=1)
 
     # save train data to test with the Java LSTMTest

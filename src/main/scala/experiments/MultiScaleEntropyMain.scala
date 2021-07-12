@@ -1,4 +1,4 @@
-package outlier
+package experiments
 
 import data.{DataPoint, KeyedDataPoint}
 import dfki.util.UserDefinedFunctions.ZscoreNormalization
@@ -14,7 +14,7 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.aggregation.Stdev
 import util.featureextraction.{Correlation, Delta, MultiScaleEntropy}
 import util.interpolation.{CustomInterpolation, Interpolation}
-import util.{OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
+import util.outlierevaluation.OutlierEvaluation
 
 import java.time.{LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
