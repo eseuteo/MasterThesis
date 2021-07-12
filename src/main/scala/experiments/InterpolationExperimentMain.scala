@@ -1,4 +1,4 @@
-package outlier
+package experiments
 
 import data.DataPoint
 import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}

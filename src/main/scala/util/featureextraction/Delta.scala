@@ -9,9 +9,10 @@ class Delta(key: String = "delta") extends ProcessWindowFunction [DataPoint[Doub
   override def process(key: String, context: Context,
                        elements: Iterable[DataPoint[Double]],
                        out: Collector[DataPoint[Double]]): Unit = {
-    val fKminus1 = elements.toList(0)
-    val fK = elements.toList(1)
-
-    out.collect(new DataPoint[Double](fK.t, key, fK.value - fKminus1.value))
+    if (elements.toList.size >= 2) {
+      val fKminus1 = elements.toList(0)
+      val fK = elements.toList(1)
+      out.collect(new DataPoint[Double](fK.t, key, fK.value - fKminus1.value))
+    }
   }
 }

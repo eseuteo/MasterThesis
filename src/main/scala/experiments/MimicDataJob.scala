@@ -1,4 +1,4 @@
-package outlier
+package experiments
 
 import data.{DataPoint, KeyedDataPoint}
 import dfki.util.UserDefinedFunctions.ZscoreNormalization
@@ -14,7 +14,8 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.aggregation.Stdev
 import util.featureextraction.{Correlation, MultiScaleEntropy}
 import util.interpolation.{CustomInterpolation, Interpolation}
-import util.{OutlierEvaluation, ZScoreCalculation, myKeyedProcessFunction}
+import util.normalization.ZScoreCalculation
+import util.outlierevaluation.OutlierEvaluation
 
 import java.time.{LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
@@ -91,9 +92,6 @@ object MimicDataJob {
         t.label
       }).map(new ZScoreCalculation()).filter(p => p.zScore < 2 && p.zScore > -2)
 
-//      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
-//      .process(new OutlierEvaluation(Time.minutes(10).toMilliseconds.toInt, 5, 3))
-
     val mimicDataInterpolated = mimicDataWithoutOutliers
       .keyBy(t => t.label)
       .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
@@ -123,23 +121,12 @@ object MimicDataJob {
 
     correlation.print()
 
-    val mse = mimicDataWithTimestamps
+    val stdev = mimicDataWithoutOutliers
       .keyBy(t => t.label)
-      .window(TumblingEventTimeWindows.of(Time.minutes(100)))
-      .process(new MultiScaleEntropy(0.1, 5, 5))
+      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
+      .aggregate(new Stdev())
 
-//    mse.print()
-
-//    val stdev = mimicDataWithoutOutliers
-//      .keyBy(t => t.label)
-//      .window(SlidingEventTimeWindows.of(Time.minutes(10), Time.minutes(1)))
-//      .aggregate(new Stdev())
-
-//    stdev.print()
-
-//    mimicDataInterpolated.print()
-
-//    mimicDataInterpolated.map(_.toString).addSink(kafkaProducer)
+    stdev.print()
 
     env.execute("MimicDataJob")
 
