@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 
-import psycopg2
 import os
 import wfdb
 import urllib.request
@@ -168,5 +167,5 @@ def extract_ts_from_subject(subject_row):
             )
 
     df = pd.DataFrame(signals_dict)
-    path = "/home/ricardohb/Documents/generated_files/ts/"
+    path = os.environ["STORE_PATH"]
     df.to_csv(f"{path}signals_{subject_id}.csv", index=False)
