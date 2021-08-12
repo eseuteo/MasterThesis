@@ -127,7 +127,7 @@ object GenerateSignals {
 
     val env: StreamExecutionEnvironment =
       StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(1)
+    env.setParallelism(3)
     env.getConfig.enableObjectReuse()
 
     val mimicData =
@@ -336,50 +336,103 @@ object GenerateSignals {
     val maxSpO2 = getMax(spo2ProcessedSignal, orderMA, slideMA)
 
     hrRespCorrelation
-      .union(hrAbpmeanCorrelation)
-      .union(hrAbpsysCorrelation)
-      .union(hrAbpdiasCorrelation)
-      .union(hrSpo2Correlation)
-      .union(respAbpmeanCorrelation)
-      .union(respAbpsysCorrelation)
-      .union(respAbpdiasCorrelation)
-      .union(respSpo2Correlation)
-      .union(abpmeanAbpsysCorrelation)
-      .union(abpmeanAbpdiasCorrelation)
-      .union(abpmeanSpo2Correlation)
-      .union(abpsysAbpdiasCorrelation)
-      .union(abpsysSpo2Correlation)
-      .union(abpdiasSpo2Correlation)
-      .union(meanHR)
-      .union(stdevHR)
-      .union(minHR)
-      .union(maxHR)
-      .union(meanRESP)
-      .union(stdevRESP)
-      .union(minRESP)
-      .union(maxRESP)
-      .union(meanABPMean)
-      .union(stdevABPMean)
-      .union(minABPMean)
-      .union(maxABPMean)
-      .union(meanABPSys)
-      .union(stdevABPSys)
-      .union(minABPSys)
-      .union(maxABPSys)
-      .union(meanABPDias)
-      .union(stdevABPDias)
-      .union(minABPDias)
-      .union(maxABPDias)
-      .union(meanSpO2)
-      .union(stdevSpO2)
-      .union(minSpO2)
-      .union(maxSpO2)
-      .union(sampleEntropyHR)
-      .union(sampleEntropyRESP)
-      .union(sampleEntropyABPMean)
-      .union(sampleEntropyABPSys)
-      .union(sampleEntropyABPDias)
-      .union(sampleEntropySpO2)
+      .filter(t => !t.value.isNaN && !t.value.isInfinity)
+      .union(
+        hrAbpmeanCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        hrAbpsysCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        hrAbpdiasCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        hrSpo2Correlation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        respAbpmeanCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        respAbpsysCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        respAbpdiasCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        respSpo2Correlation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        abpmeanAbpsysCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpmeanAbpdiasCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpmeanSpo2Correlation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpsysAbpdiasCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpsysSpo2Correlation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        abpdiasSpo2Correlation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(meanHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(sampleEntropyHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(
+        sampleEntropyRESP.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropyABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropyABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropyABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropySpO2.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
       .union(sofascore)
       .keyBy(t => t.t)
       .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
@@ -389,6 +442,7 @@ object GenerateSignals {
       .addSink(sink)
 
     env.execute("MimicDataJob")
+    println(env.getExecutionPlan)
 
   }
 
