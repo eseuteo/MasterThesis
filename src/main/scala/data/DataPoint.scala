@@ -3,8 +3,11 @@ package data
 import java.text.SimpleDateFormat
 import java.util.Date
 
-class DataPoint[T](val t: Long = 0, val label: String = null, val value: T = null) extends Serializable {
-  var outlierVotes = 0
+class DataPoint[T](
+    val t: Long = 0,
+    val label: String = null,
+    val value: T = null
+) extends Serializable {
   var zScore = 0.0
   var key = ""
 

@@ -59,7 +59,7 @@ if __name__ == "__main__":
     scaler = StandardScaler()
     # pick a window size
     # sequence_length = 3
-    path = "./matched_six_vs_cli_onset/several.csv"
+    path = "./matched_six_vs_cli_onset/several3_sorted.csv"
     # path = "./matched_six_vs_cli_onset/Shock-Patient_id-69272_new_version.csv"
     # path = './matched_six_vs_cli_onset/Shock-Patient_id-89091-vs-cli.csv'
     # path = './matched_six_vs_cli_onset/Shock-patient_id-69272-vs-cli.csv'
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         seq_array,
         label_array,
         epochs=5,
-        batch_size=16,
+        batch_size=8,
         verbose=1,
         shuffle=False
         # ,validation_split=0.05,

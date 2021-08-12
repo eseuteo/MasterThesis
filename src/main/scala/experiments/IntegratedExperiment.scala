@@ -135,6 +135,7 @@ object IntegratedExperiment {
     val spo2ProcessedSignal =
       processSignal(mimicDataWithTimestamps, "SpO2", 60, 1)
     val sofascore = processSignal(mimicDataWithTimestamps, "SOFA_SCORE", 60, 60)
+      .map(t => new DataPoint[Double](t.t, "SOFA_SCORE", 0.0))
 
     val hrRespCorrelation = getCorrelation(
       hrProcessedSignal,
@@ -362,7 +363,9 @@ object IntegratedExperiment {
           )
         )
 
-    output.print()
+    output
+      .map(t => t.toString)
+      .addSink(sink)
 
     env.execute("MimicDataJob")
   }
