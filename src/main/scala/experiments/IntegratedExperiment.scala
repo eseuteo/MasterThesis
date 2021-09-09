@@ -1,43 +1,25 @@
 package experiments
 
 import data.DataPoint
-import experiments.GenerateSignals.{
-  getCorrelation,
-  getMax,
-  getMean,
-  getMin,
-  getSampleEntropy,
-  getStdev,
-  processSignal
-}
+import experiments.GenerateSignals.{getCorrelation, getDelta, getMax, getMean, getMin, getSampleEntropy, getStdev, processSOFA, processSignal}
 import models.LSTMSequenceClassifier
-import org.apache.flink.api.common.eventtime.{
-  SerializableTimestampAssigner,
-  WatermarkStrategy
-}
-import org.apache.flink.api.common.serialization.{
-  SimpleStringEncoder,
-  SimpleStringSchema
-}
+import org.apache.commons.lang3.time.StopWatch
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
+import org.apache.flink.api.common.serialization.{SimpleStringEncoder, SimpleStringSchema}
 import org.apache.flink.api.java.tuple.Tuple5
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink
-import org.apache.flink.streaming.api.scala.{
-  DataStream,
-  StreamExecutionEnvironment
-}
-import org.apache.flink.streaming.api.windowing.assigners.{
-  SlidingEventTimeWindows,
-  TumblingEventTimeWindows
-}
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindows, TumblingEventTimeWindows}
 import org.apache.flink.api.scala.createTypeInformation
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.signalgeneration.{GenerateSignalsMap, GenerateTuplesForModel}
 
-import java.time.{LocalDateTime, ZoneId}
+import java.time.{Duration, LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
@@ -58,6 +40,7 @@ object IntegratedExperiment {
 //    "FlinkSequences/seq_classification/python/lstm_model_vitals_new/"
 
   def main(args: Array[String]): Unit = {
+
     val parameters: ParameterTool = ParameterTool.fromArgs(args)
     val signals =
       Array("HR", "ABPSys", "ABPDias", "ABPMean", "RESP", "SpO2", "SOFA_SCORE")
@@ -90,15 +73,19 @@ object IntegratedExperiment {
       )
       .build()
 
-    val env: StreamExecutionEnvironment =
-      StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(1)
+//    val conf: Configuration = new Configuration()
+
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+//      StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf)
+//    env.setParallelism(2)
     env.getConfig.enableObjectReuse()
+
 
     val mimicData = env.readTextFile(mimicFile).filter(t => !t.contains("TIME"))
 
     val watermarkStrategy = WatermarkStrategy
-      .forMonotonousTimestamps()
+      .forBoundedOutOfOrderness(Duration.ofMinutes(10))
+//      .forMonotonousTimestamps()
       .withTimestampAssigner(
         new SerializableTimestampAssigner[DataPoint[Double]] {
           override def extractTimestamp(t: DataPoint[Double], l: Long): Long =
@@ -134,8 +121,7 @@ object IntegratedExperiment {
       processSignal(mimicDataWithTimestamps, "ABPDias", 60, 1)
     val spo2ProcessedSignal =
       processSignal(mimicDataWithTimestamps, "SpO2", 60, 1)
-    val sofascore = processSignal(mimicDataWithTimestamps, "SOFA_SCORE", 60, 60)
-      .map(t => new DataPoint[Double](t.t, "SOFA_SCORE", 0.0))
+    val sofascore = processSOFA(mimicDataWithTimestamps, 60, 1)
 
     val hrRespCorrelation = getCorrelation(
       hrProcessedSignal,
@@ -300,55 +286,133 @@ object IntegratedExperiment {
     val minSpO2 = getMin(spo2ProcessedSignal, orderMA, slideMA)
     val maxSpO2 = getMax(spo2ProcessedSignal, orderMA, slideMA)
 
+    val deltaHR = getDelta(hrProcessedSignal, "HR")
+    val deltaDeltaHR = getDelta(deltaHR, "deltaHR")
+    val deltaResp = getDelta(respProcessedSignal, "RESP")
+    val deltaDeltaResp = getDelta(deltaResp, "deltaRESP")
+    val deltaAbpm = getDelta(abpmProcessedSignal, "ABPMean")
+    val deltaDeltaAbpm = getDelta(deltaAbpm, "deltaABPMean")
+    val deltaAbps = getDelta(abpsProcessedSignal, "ABPSys")
+    val deltaDeltaAbps = getDelta(deltaAbps, "deltaABPSys")
+    val deltaAbpd = getDelta(abpdProcessedSignal, "ABPDias")
+    val deltaDeltaAbpd = getDelta(deltaAbpd, "deltaABPDias")
+    val deltaSpO2 = getDelta(spo2ProcessedSignal, "SpO2")
+    val deltaDeltaSpO2 = getDelta(deltaSpO2, "deltaSpO2")
+
     val lstmInput = hrRespCorrelation
-      .union(hrAbpmeanCorrelation)
-      .union(hrAbpsysCorrelation)
-      .union(hrAbpdiasCorrelation)
-      .union(hrSpo2Correlation)
-      .union(respAbpmeanCorrelation)
-      .union(respAbpsysCorrelation)
-      .union(respAbpdiasCorrelation)
-      .union(respSpo2Correlation)
-      .union(abpmeanAbpsysCorrelation)
-      .union(abpmeanAbpdiasCorrelation)
-      .union(abpmeanSpo2Correlation)
-      .union(abpsysAbpdiasCorrelation)
-      .union(abpsysSpo2Correlation)
-      .union(abpdiasSpo2Correlation)
-      .union(meanHR)
-      .union(stdevHR)
-      .union(minHR)
-      .union(maxHR)
-      .union(meanRESP)
-      .union(stdevRESP)
-      .union(minRESP)
-      .union(maxRESP)
-      .union(meanABPMean)
-      .union(stdevABPMean)
-      .union(minABPMean)
-      .union(maxABPMean)
-      .union(meanABPSys)
-      .union(stdevABPSys)
-      .union(minABPSys)
-      .union(maxABPSys)
-      .union(meanABPDias)
-      .union(stdevABPDias)
-      .union(minABPDias)
-      .union(maxABPDias)
-      .union(meanSpO2)
-      .union(stdevSpO2)
-      .union(minSpO2)
-      .union(maxSpO2)
-      .union(sampleEntropyHR)
-      .union(sampleEntropyRESP)
-      .union(sampleEntropyABPMean)
-      .union(sampleEntropyABPSys)
-      .union(sampleEntropyABPDias)
-      .union(sampleEntropySpO2)
+      .filter(t => !t.value.isNaN && !t.value.isInfinity)
+      .union(
+        hrAbpmeanCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        hrAbpsysCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        hrAbpdiasCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        hrSpo2Correlation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        respAbpmeanCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        respAbpsysCorrelation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        respAbpdiasCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        respSpo2Correlation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        abpmeanAbpsysCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpmeanAbpdiasCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpmeanSpo2Correlation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpsysAbpdiasCorrelation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(
+        abpsysSpo2Correlation.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        abpdiasSpo2Correlation.filter(t =>
+          !t.value.isNaN && !t.value.isInfinity
+        )
+      )
+      .union(meanHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxRESP.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(meanSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(stdevSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(minSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(maxSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(sampleEntropyHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(
+        sampleEntropyRESP.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropyABPMean.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropyABPSys.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropyABPDias.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(
+        sampleEntropySpO2.filter(t => !t.value.isNaN && !t.value.isInfinity)
+      )
+      .union(deltaHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaResp.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaResp.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaAbpm.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaAbpm.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaAbps.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaAbps.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaAbpd.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaAbpd.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
       .union(sofascore)
       .keyBy(t => t.t)
       .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
-      .trigger(CountTrigger.of(46))
+      .trigger(CountTrigger.of(58))
       .process(GenerateSignalsMap())
       .map(t => t._2)
       .map(new GenerateTuplesForModel())
@@ -368,5 +432,6 @@ object IntegratedExperiment {
       .addSink(sink)
 
     env.execute("MimicDataJob")
+
   }
 }
