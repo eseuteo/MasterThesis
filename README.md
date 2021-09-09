@@ -9,6 +9,26 @@ The code developed for Scala is available under src/main/scala directory. Folder
 
 We also include code for extracting the data from MIMIC-III database (under data_preprocessing directory), as well as for training an LSTM network with the sequences generated with our functions (see src/main/scala/experiments/GenerateSignals.scala). The pre-trained model is available under src/main/resources/mimic2wdb/train-set/C1/lstm_model_vitals_new.
 
+#### Generating raw signals time series + SOFA scores
+
+We followed the methodology used by Hashmi, S. in her thesis in order to generate the SOFA scores for our signals. Thus, after installing the MIMIC-III clinical database and generating the tables and views for identifying sepsis patients ([available here](https://github.com/alistairewj/sepsis3-mimic)), we need to run the scripts available in the 'Generating time series of SOFA scores' folder in the following order:
+1. urine_output.sql
+2. vitals.sql
+3. labs.sql
+4. ventsettings.sql
+5. ventdurations.sql
+6. gcs.sql
+7. echodata.sql
+8. blood_gas.sql
+9. bloodgasarterial.sql
+10. Materialized views for SOFA query.sql
+11. create table sepsis3_onsettime_new.sql
+12. create table sepsis3_hourlysofa.sql
+13. create table sepsis3_hourlysofa_entire_icustay.sql
+14. Procedure sp_calc_hourly_SOFA.sql
+15. create procedure sp_calc_hourly_SOFA_entire_icustay.sql 
+16. updating sepsis3_cohort-new spesis_onsettime.sql
+
 More information about this project is available in the thesis document.
 
 Requirements: 
