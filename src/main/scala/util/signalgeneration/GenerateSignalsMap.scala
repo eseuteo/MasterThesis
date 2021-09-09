@@ -22,8 +22,13 @@ case class GenerateSignalsMap() extends ProcessWindowFunction[DataPoint[Double],
     val correlationLabels = basicLabels.combinations(2).toList.map(t => t.mkString).map(t => s"Corr$t").toList
     val sampEnLabels = basicLabels.map(t => s"Entropy$t")
     val otherLabels = basicLabels.flatMap(t => List(s"stdev$t", s"mean$t", s"min$t", s"max$t")).toList
+    val deltaLabels = basicLabels.flatMap(t => List(s"delta$t", s"deltadelta$t")).toList
 
-    val allLabels = correlationLabels ++ sampEnLabels ++ otherLabels ++ List("SOFA_SCORE")
+    val allLabels = correlationLabels ++ sampEnLabels ++ otherLabels ++ deltaLabels ++ List("SOFA_SCORE")
+//    val allLabels = List("stdevABPMean", "stdevABPSys", "maxABPDias", "minHR", "maxABPSys", "minRESP", "meanABPSys", "stdevHR", "CorrHRABPSys", "EntropyRESP", "meanHR", "minSpO2", "CorrRESPSpO2", "CorrABPSysABPDias", "maxRESP", "CorrHRABPMean")
+//    val allLabels = correlationLabels ++ sampEnLabels ++ deltaLabels ++ List("SOFA_SCORE")
+
+
 
     val date = new Date(elements.toList(0).t)
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")

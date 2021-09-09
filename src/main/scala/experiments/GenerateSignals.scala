@@ -1,42 +1,26 @@
 package experiments
 
 import data.DataPoint
-import org.apache.flink.api.common.eventtime.{
-  SerializableTimestampAssigner,
-  WatermarkStrategy
-}
-import org.apache.flink.api.common.serialization.{
-  SimpleStringEncoder,
-  SimpleStringSchema
-}
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
+import org.apache.flink.api.common.serialization.{SimpleStringEncoder, SimpleStringSchema}
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.scala.createTypeInformation
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink
-import org.apache.flink.streaming.api.scala.{
-  DataStream,
-  StreamExecutionEnvironment
-}
-import org.apache.flink.streaming.api.windowing.assigners.{
-  GlobalWindows,
-  SlidingEventTimeWindows,
-  TumblingEventTimeWindows
-}
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.windowing.assigners.{GlobalWindows, SlidingEventTimeWindows, TumblingEventTimeWindows}
 import org.apache.flink.streaming.api.windowing.time.Time
-import org.apache.flink.streaming.api.windowing.triggers.{
-  CountTrigger,
-  EventTimeTrigger,
-  PurgingTrigger
-}
+import org.apache.flink.streaming.api.windowing.triggers.{CountTrigger, EventTimeTrigger, PurgingTrigger}
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer
 import util.aggregation.{Average, Max, Min, Stdev}
-import util.featureextraction.{Correlation, MultiScaleEntropy, SampleEntropy}
+import util.featureextraction.{Correlation, Delta, MultiScaleEntropy, SampleEntropy}
 import util.interpolation.Interpolation
 import util.normalization.ZScoreCalculation
 import util.signalgeneration.GenerateSignalsMap
 
-import java.time.{LocalDateTime, ZoneId}
+import java.time.{Duration, LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
@@ -125,9 +109,11 @@ object GenerateSignals {
       )
       .build()
 
+    val conf: Configuration = new Configuration()
+
     val env: StreamExecutionEnvironment =
-      StreamExecutionEnvironment.getExecutionEnvironment
-    env.setParallelism(3)
+      StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf)
+    env.setParallelism(1)
     env.getConfig.enableObjectReuse()
 
     val mimicData =
@@ -135,6 +121,8 @@ object GenerateSignals {
 
     val watermarkStrategy = WatermarkStrategy
       .forMonotonousTimestamps()
+//      .forBoundedOutOfOrderness(Duration.ofMinutes(60))
+//      .withIdleness(Duration.ofMinutes(60))
       .withTimestampAssigner(
         new SerializableTimestampAssigner[DataPoint[Double]] {
           override def extractTimestamp(t: DataPoint[Double], l: Long): Long =
@@ -170,7 +158,7 @@ object GenerateSignals {
       processSignal(mimicDataWithTimestamps, "ABPDias", 60, 1)
     val spo2ProcessedSignal =
       processSignal(mimicDataWithTimestamps, "SpO2", 60, 1)
-    val sofascore = processSignal(mimicDataWithTimestamps, "SOFA_SCORE", 60, 60)
+    val sofascore = processSOFA(mimicDataWithTimestamps, 60, 1)
 
     val hrRespCorrelation = getCorrelation(
       hrProcessedSignal,
@@ -335,6 +323,19 @@ object GenerateSignals {
     val minSpO2 = getMin(spo2ProcessedSignal, orderMA, slideMA)
     val maxSpO2 = getMax(spo2ProcessedSignal, orderMA, slideMA)
 
+    val deltaHR = getDelta(hrProcessedSignal, "HR")
+    val deltaDeltaHR = getDelta(deltaHR, "deltaHR")
+    val deltaResp = getDelta(respProcessedSignal, "RESP")
+    val deltaDeltaResp = getDelta(deltaResp, "deltaRESP")
+    val deltaAbpm = getDelta(abpmProcessedSignal, "ABPMean")
+    val deltaDeltaAbpm = getDelta(deltaAbpm, "deltaABPMean")
+    val deltaAbps = getDelta(abpsProcessedSignal, "ABPSys")
+    val deltaDeltaAbps = getDelta(deltaAbps, "deltaABPSys")
+    val deltaAbpd = getDelta(abpdProcessedSignal, "ABPDias")
+    val deltaDeltaAbpd = getDelta(deltaAbpd, "deltaABPDias")
+    val deltaSpO2 = getDelta(spo2ProcessedSignal, "SpO2")
+    val deltaDeltaSpO2 = getDelta(deltaSpO2, "deltaSpO2")
+
     hrRespCorrelation
       .filter(t => !t.value.isNaN && !t.value.isInfinity)
       .union(
@@ -433,17 +434,35 @@ object GenerateSignals {
       .union(
         sampleEntropySpO2.filter(t => !t.value.isNaN && !t.value.isInfinity)
       )
+      .union(deltaHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaHR.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaResp.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaResp.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaAbpm.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaAbpm.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaAbps.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaAbps.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaAbpd.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaAbpd.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
+      .union(deltaDeltaSpO2.filter(t => !t.value.isNaN && !t.value.isInfinity))
       .union(sofascore)
       .keyBy(t => t.t)
       .window(TumblingEventTimeWindows.of(Time.minutes(orderMA)))
-      .trigger(CountTrigger.of(46))
+      .trigger(CountTrigger.of(58))
       .process(GenerateSignalsMap())
       .map(t => t._2)
       .addSink(sink)
 
     env.execute("MimicDataJob")
-    println(env.getExecutionPlan)
 
+  }
+
+  def getDelta(signal: DataStream[DataPoint[Double]], label: String): DataStream[DataPoint[Double]] = {
+    signal.keyBy(t => t.label)
+      .window(SlidingEventTimeWindows.of(Time.minutes(2), Time.minutes(1)))
+      .process(new Delta())
+      .map(t => new DataPoint[Double](t.t, s"delta$label", t.value))
   }
 
   def getJoin(
@@ -507,6 +526,25 @@ object GenerateSignals {
       .keyBy(t => t.label)
       .map(new ZScoreCalculation())
       .filter(t => t.zScore > -3 && t.zScore < 3)
+      .map(t => new DataPoint[Double](t.t, t.label, t.zScore))
+  }
+
+  def processSOFA(
+                     signal: DataStream[DataPoint[Double]],
+                     windowSize: Long,
+                     windowSlide: Long
+                   ): DataStream[DataPoint[Double]] = {
+    signal
+      .filter(t => t.value != -1.0)
+      .filter(t => t.label == "SOFA_SCORE")
+      .keyBy(t => t.label)
+      .window(
+        SlidingEventTimeWindows
+          .of(Time.minutes(windowSize), Time.minutes(windowSlide))
+      )
+      .process(
+        new Interpolation(mode = "linear", windowSizeInMinutes = windowSize)
+      )
   }
 
 }

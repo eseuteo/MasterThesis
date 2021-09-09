@@ -35,6 +35,7 @@ under the License.
 		<scala.binary.version>2.12</scala.binary.version>
 		<maven.compiler.source>${java.version}</maven.compiler.source>
 		<maven.compiler.target>${java.version}</maven.compiler.target>
+		<tensorflow.version>1.15.0</tensorflow.version>
 	</properties>
 
 	<repositories>
@@ -59,6 +60,11 @@ under the License.
 			<artifactId>flink-java</artifactId>
 			<version>${flink.version}</version>
 			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-runtime-web_${scala.binary.version}</artifactId>
+			<version>${flink.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -246,12 +252,26 @@ under the License.
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>plass.StreamingCEPMonitoringJob</mainClass>
+									<mainClass>class.StreamingCEPMonitoringJob</mainClass>
 								</transformer>
 							</transformers>
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<transformers combine.self="override">
+						<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+							<manifestEntries>
+								<Implementation-Version>${tensorflow.version}</Implementation-Version>
+							</manifestEntries>
+						</transformer>
+					</transformers>
+				</configuration>
 			</plugin>
 		</plugins>
 

@@ -18,9 +18,9 @@ class GenerateTuplesForModel
       .atZone(ZoneId.systemDefault())
       .toInstant
       .toEpochMilli
-    val input = data.slice(2, 47).map(_.toDouble)
+    val input = data.slice(2, 59).map(_.toDouble)
     new Tuple4[String, Long, String, Array[Double]](
-      "patientId",
+      LocalDateTime.parse(data(0).dropRight(4), DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss")).getYear.toString,
       date,
       "label",
       input
